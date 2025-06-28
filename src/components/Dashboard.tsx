@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Bell, Settings, Calendar } from 'lucide-react';
+import { Plus, Bell, Settings, Calendar, Edit, Trash2 } from 'lucide-react';
 import { Document, SortOption } from '@/types';
 import { StorageService } from '@/services/storageService';
 import { NotificationService } from '@/services/notificationService';
@@ -12,10 +12,11 @@ import { getDocumentIcon, getDocumentTypeLabel } from '@/utils/documentIcons';
 
 interface DashboardProps {
   onAddDocument: () => void;
+  onEditDocument: (document: Document) => void;
   onSettings: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, onSettings }) => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('urgency');
   const [filterType, setFilterType] = useState<string>('all');
@@ -63,6 +64,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
     loadDocuments();
   };
 
+  const handleDeleteDocument = async (documentId: string) => {
+    if (confirm('Are you sure you want to delete this document?')) {
+      StorageService.deleteDocument(documentId);
+      await NotificationService.cancelDocumentReminder(documentId);
+      loadDocuments();
+    }
+  };
+
   const handleSendUrgentAlert = async (document: Document) => {
     await NotificationService.scheduleUrgentAlert(document);
   };
@@ -71,12 +80,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
   const urgentDocs = documents.filter(doc => getUrgencyStatus(doc.expiryDate) === 'danger' || getUrgencyStatus(doc.expiryDate) === 'expired');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">RenewMe</h1>
-          <p className="text-gray-600">Never miss a renewal again</p>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">RenewMe</h1>
+          <p className="text-gray-600 dark:text-gray-300">Never miss a renewal again</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -101,15 +110,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card className="card-shadow">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-gray-800">{documents.length}</div>
-            <div className="text-sm text-gray-600">Total Documents</div>
+            <div className="text-2xl font-bold text-gray-800 dark:text-white">{documents.length}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">Total Documents</div>
           </CardContent>
         </Card>
         
         <Card className="card-shadow">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-red-600">{urgentDocs.length}</div>
-            <div className="text-sm text-gray-600">Urgent</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">Urgent</div>
           </CardContent>
         </Card>
 
@@ -118,7 +127,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
             <div className="text-2xl font-bold text-green-600">
               {documents.filter(doc => getUrgencyStatus(doc.expiryDate) === 'safe').length}
             </div>
-            <div className="text-sm text-gray-600">Safe</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">Safe</div>
           </CardContent>
         </Card>
 
@@ -127,7 +136,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
             <div className="text-2xl font-bold text-yellow-600">
               {documents.filter(doc => getUrgencyStatus(doc.expiryDate) === 'warning').length}
             </div>
-            <div className="text-sm text-gray-600">Warning</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">Warning</div>
           </CardContent>
         </Card>
       </div>
@@ -137,7 +146,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
         <select 
           value={sortBy} 
           onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm"
+          className="px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
         >
           <option value="urgency">Sort by Urgency</option>
           <option value="expiry_date">Sort by Expiry Date</option>
@@ -148,7 +157,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
         <select 
           value={filterType} 
           onChange={(e) => setFilterType(e.target.value)}
-          className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm"
+          className="px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
         >
           <option value="all">All Types</option>
           <option value="passport">Passport</option>
@@ -167,8 +176,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
         <Card className="card-shadow">
           <CardContent className="p-8 text-center">
             <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">No Documents Yet</h3>
-            <p className="text-gray-500 mb-4">Start by adding your first document to track</p>
+            <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-300 mb-2">No Documents Yet</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">Start by adding your first document to track</p>
             <Button onClick={onAddDocument} className="mobile-tap">
               <Plus className="h-4 w-4 mr-2" />
               Add Your First Document
@@ -188,11 +197,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
                     <div className="flex items-start space-x-3 flex-1">
                       <div className="text-2xl">{getDocumentIcon(document.type)}</div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800">{document.name}</h3>
-                        <p className="text-sm text-gray-600">{getDocumentTypeLabel(document.type)}</p>
-                        <p className="text-sm text-gray-500">Expires: {formatExpiryDate(document.expiryDate)}</p>
+                        <h3 className="font-semibold text-gray-800 dark:text-white">{document.name}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">{getDocumentTypeLabel(document.type)}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Expires: {formatExpiryDate(document.expiryDate)}</p>
                         {document.notes && (
-                          <p className="text-xs text-gray-500 mt-1">{document.notes}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{document.notes}</p>
                         )}
                       </div>
                     </div>
@@ -212,28 +221,46 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onSettings }) => {
                          `${daysLeft} Days`}
                       </Badge>
                       
-                      {urgency === 'danger' || urgency === 'expired' ? (
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSendUrgentAlert(document)}
-                            className="mobile-tap"
-                          >
-                            <Bell className="h-3 w-3" />
-                          </Button>
-                          {!document.isHandled && (
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onEditDocument(document)}
+                          className="mobile-tap"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteDocument(document.id)}
+                          className="mobile-tap text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                        {urgency === 'danger' || urgency === 'expired' ? (
+                          <>
                             <Button
                               size="sm"
-                              variant="secondary"
-                              onClick={() => handleMarkAsHandled(document.id)}
+                              variant="outline"
+                              onClick={() => handleSendUrgentAlert(document)}
                               className="mobile-tap"
                             >
-                              Mark Handled
+                              <Bell className="h-3 w-3" />
                             </Button>
-                          )}
-                        </div>
-                      ) : null}
+                            {!document.isHandled && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleMarkAsHandled(document.id)}
+                                className="mobile-tap"
+                              >
+                                Mark Handled
+                              </Button>
+                            )}
+                          </>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
