@@ -4,17 +4,17 @@ import Dashboard from '@/components/Dashboard';
 import AddDocumentForm from '@/components/AddDocumentForm';
 import Settings from '@/components/Settings';
 import { StorageService } from '@/services/storageService';
+import { Document } from '@/types';
 
-type AppView = 'dashboard' | 'add-document' | 'settings';
+type AppView = 'dashboard' | 'add-document' | 'edit-document' | 'settings';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
 
   useEffect(() => {
-    // Initialize app data
     console.log('RenewMe app initialized');
     
-    // Load any existing data
     const documents = StorageService.getDocuments();
     const settings = StorageService.getSettings();
     
@@ -23,7 +23,13 @@ const Index = () => {
   }, []);
 
   const handleAddDocument = () => {
+    setEditingDocument(null);
     setCurrentView('add-document');
+  };
+
+  const handleEditDocument = (document: Document) => {
+    setEditingDocument(document);
+    setCurrentView('edit-document');
   };
 
   const handleSettings = () => {
@@ -31,26 +37,30 @@ const Index = () => {
   };
 
   const handleBack = () => {
+    setEditingDocument(null);
     setCurrentView('dashboard');
   };
 
   const handleAddSuccess = () => {
+    setEditingDocument(null);
     setCurrentView('dashboard');
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       {currentView === 'dashboard' && (
         <Dashboard 
           onAddDocument={handleAddDocument}
+          onEditDocument={handleEditDocument}
           onSettings={handleSettings}
         />
       )}
       
-      {currentView === 'add-document' && (
+      {(currentView === 'add-document' || currentView === 'edit-document') && (
         <AddDocumentForm 
           onBack={handleBack}
           onSuccess={handleAddSuccess}
+          editingDocument={editingDocument}
         />
       )}
       

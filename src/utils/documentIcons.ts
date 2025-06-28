@@ -1,5 +1,6 @@
 
 import { DocumentType } from '@/types';
+import { CustomDocumentService } from '@/services/customDocumentService';
 
 export const getDocumentIcon = (type: DocumentType): string => {
   switch (type) {
@@ -11,6 +12,11 @@ export const getDocumentIcon = (type: DocumentType): string => {
     case 'certificate': return '📜';
     case 'membership': return '🎫';
     case 'other': return '📄';
+    default:
+      // Check custom document types
+      const customTypes = CustomDocumentService.getCustomDocumentTypes();
+      const customType = customTypes.find(ct => ct.id === type);
+      return customType?.icon || '📄';
   }
 };
 
@@ -24,6 +30,11 @@ export const getDocumentTypeLabel = (type: DocumentType): string => {
     case 'certificate': return 'Certificate';
     case 'membership': return 'Membership';
     case 'other': return 'Other';
+    default:
+      // Check custom document types
+      const customTypes = CustomDocumentService.getCustomDocumentTypes();
+      const customType = customTypes.find(ct => ct.id === type);
+      return customType?.name || 'Unknown';
   }
 };
 
@@ -37,3 +48,14 @@ export const documentTypeOptions = [
   { value: 'membership' as DocumentType, label: 'Membership', icon: '🎫' },
   { value: 'other' as DocumentType, label: 'Other', icon: '📄' },
 ];
+
+export const getAllDocumentTypeOptions = () => {
+  const customTypes = CustomDocumentService.getCustomDocumentTypes();
+  const customOptions = customTypes.map(type => ({
+    value: type.id as DocumentType,
+    label: type.name,
+    icon: type.icon
+  }));
+  
+  return [...documentTypeOptions, ...customOptions];
+};

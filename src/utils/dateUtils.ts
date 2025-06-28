@@ -19,10 +19,10 @@ export const getUrgencyStatus = (expiryDate: Date): UrgencyStatus => {
 
 export const getUrgencyColor = (urgency: UrgencyStatus): string => {
   switch (urgency) {
-    case 'safe': return 'text-green-700 bg-green-50 border-green-200';
-    case 'warning': return 'text-yellow-700 bg-yellow-50 border-yellow-200';
-    case 'danger': return 'text-red-700 bg-red-50 border-red-200';
-    case 'expired': return 'text-red-800 bg-red-100 border-red-300';
+    case 'safe': return 'text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-900/20 dark:border-green-800';
+    case 'warning': return 'text-yellow-700 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-800';
+    case 'danger': return 'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800';
+    case 'expired': return 'text-red-800 bg-red-100 border-red-300 dark:text-red-300 dark:bg-red-900/30 dark:border-red-700';
   }
 };
 
@@ -48,6 +48,12 @@ export const getReminderDate = (expiryDate: Date, period: ReminderPeriod): Date 
       return new Date(expiry.getTime() - 60 * 24 * 60 * 60 * 1000);
     case '3_months':
       return new Date(expiry.getTime() - 90 * 24 * 60 * 60 * 1000);
+    case '6_months':
+      return new Date(expiry.getTime() - 180 * 24 * 60 * 60 * 1000);
+    case '9_months':
+      return new Date(expiry.getTime() - 270 * 24 * 60 * 60 * 1000);
+    case '12_months':
+      return new Date(expiry.getTime() - 365 * 24 * 60 * 60 * 1000);
     default:
       return new Date(expiry.getTime() - 7 * 24 * 60 * 60 * 1000);
   }
@@ -60,6 +66,9 @@ export const getReminderPeriodLabel = (period: ReminderPeriod): string => {
     case '1_month': return '1 Month Before';
     case '2_months': return '2 Months Before';
     case '3_months': return '3 Months Before';
+    case '6_months': return '6 Months Before';
+    case '9_months': return '9 Months Before';
+    case '12_months': return '12 Months Before';
     case 'custom': return 'Custom';
   }
 };
