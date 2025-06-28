@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -12,7 +13,7 @@ export default {
 	theme: {
 		container: {
 			center: true,
-			padding: '2rem',
+			padding: '1rem',
 			screens: {
 				'2xl': '1400px'
 			}
@@ -61,7 +62,12 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// RenewMe specific colors
+				safe: 'hsl(var(--safe))',
+				warning: 'hsl(var(--warning))',
+				danger: 'hsl(var(--danger))',
+				expired: 'hsl(var(--expired))'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,11 +90,31 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'slide-up': {
+					from: {
+						transform: 'translateY(100%)'
+					},
+					to: {
+						transform: 'translateY(0)'
+					}
+				},
+				'pulse-ring': {
+					'0%': {
+						transform: 'scale(0.33)',
+						opacity: '1'
+					},
+					'80%, 100%': {
+						transform: 'scale(2.33)',
+						opacity: '0'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'slide-up': 'slide-up 0.3s ease-out',
+				'pulse-ring': 'pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite'
 			}
 		}
 	},
