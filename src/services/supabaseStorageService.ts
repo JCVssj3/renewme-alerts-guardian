@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Document, AppSettings, Entity, CustomDocumentType, ReminderPeriod } from '@/types';
 
@@ -31,13 +30,10 @@ export class SupabaseStorageService {
 
   static async addDocument(document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'>) {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('User not authenticated');
-
       const { error } = await supabase
         .from('documents')
         .insert({
-          user_id: userData.user.id,
+          user_id: 'anonymous', // Temporary user ID since auth is removed
           name: document.name,
           type: document.type,
           expiry_date: document.expiryDate.toISOString(),
@@ -123,14 +119,11 @@ export class SupabaseStorageService {
 
   private static async createDefaultEntity() {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
-
       await supabase
         .from('entities')
         .insert({
           id: 'self',
-          user_id: userData.user.id,
+          user_id: 'anonymous',
           name: 'Myself',
           tag: 'Personal',
           icon: '👤',
@@ -143,14 +136,11 @@ export class SupabaseStorageService {
 
   static async addEntity(entity: Omit<Entity, 'createdAt' | 'updatedAt'>) {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('User not authenticated');
-
       const { error } = await supabase
         .from('entities')
         .insert({
           id: entity.id,
-          user_id: userData.user.id,
+          user_id: 'anonymous',
           name: entity.name,
           tag: entity.tag,
           icon: entity.icon,
@@ -223,13 +213,10 @@ export class SupabaseStorageService {
 
   static async addCustomDocumentType(type: Omit<CustomDocumentType, 'id' | 'createdAt'>) {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('User not authenticated');
-
       const { error } = await supabase
         .from('custom_document_types')
         .insert({
-          user_id: userData.user.id,
+          user_id: 'anonymous',
           name: type.name,
           icon: type.icon
         });
@@ -261,6 +248,7 @@ export class SupabaseStorageService {
       const { data, error } = await supabase
         .from('user_settings')
         .select('*')
+        .eq('user_id', 'anonymous')
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
@@ -296,13 +284,10 @@ export class SupabaseStorageService {
 
   private static async createDefaultSettings() {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
-
       await supabase
         .from('user_settings')
         .insert({
-          user_id: userData.user.id,
+          user_id: 'anonymous',
           theme: 'system',
           notifications_enabled: true,
           notifications_sound: true,
@@ -316,13 +301,10 @@ export class SupabaseStorageService {
 
   static async saveSettings(settings: AppSettings) {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('User not authenticated');
-
       const { error } = await supabase
         .from('user_settings')
         .upsert({
-          user_id: userData.user.id,
+          user_id: 'anonymous',
           theme: settings.theme,
           notifications_enabled: settings.notifications.enabled,
           notifications_sound: settings.notifications.sound,
@@ -337,14 +319,11 @@ export class SupabaseStorageService {
     }
   }
 
-  // Document Image Upload
+  // Document Image Upload - Simplified without auth
   static async uploadDocumentImage(file: File): Promise<string | null> {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('User not authenticated');
-
       const fileExt = file.name.split('.').pop();
-      const fileName = `${userData.user.id}/${Date.now()}.${fileExt}`;
+      const fileName = `anonymous/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('document-images')

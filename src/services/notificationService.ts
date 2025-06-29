@@ -27,7 +27,7 @@ export class NotificationService {
             body: `Your ${document.name} expires in ${daysLeft} days`,
             id: parseInt(document.id.replace(/\D/g, '').slice(0, 8) || '1'),
             schedule: { at: reminderDate },
-            sound: 'default',
+            sound: 'beep.wav', // Gentle siren sound
             attachments: undefined,
             actionTypeId: '',
             extra: {
@@ -67,12 +67,32 @@ export class NotificationService {
           body: `${document.name} expires ${daysLeft <= 0 ? 'today' : `in ${daysLeft} days`}!`,
           id: parseInt(document.id.replace(/\D/g, '').slice(-8) || '2'),
           schedule: { at: new Date(Date.now() + 1000) }, // 1 second from now
-          sound: 'default',
+          sound: 'beep.wav', // Gentle siren sound
           attachments: undefined,
           actionTypeId: '',
           extra: {
             documentId: document.id,
             urgent: true
+          }
+        }
+      ]
+    });
+  }
+
+  // Schedule immediate notification for testing
+  static async testNotification() {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          title: '🔔 Test Notification',
+          body: 'This is a test notification with gentle siren sound',
+          id: 999999,
+          schedule: { at: new Date(Date.now() + 2000) }, // 2 seconds from now
+          sound: 'beep.wav',
+          attachments: undefined,
+          actionTypeId: '',
+          extra: {
+            test: true
           }
         }
       ]

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,11 +7,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, ArrowUp, Camera, Plus } from 'lucide-react';
+import { CalendarIcon, ArrowUp, Camera, Image, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Document, DocumentType, ReminderPeriod, Entity } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { NotificationService } from '@/services/notificationService';
+import { CameraService } from '@/services/cameraService';
 import { getAllDocumentTypeOptions } from '@/utils/documentIcons';
 import { cn } from '@/lib/utils';
 
@@ -146,7 +146,31 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     }
   };
 
-  const handleImageCapture = () => {
+  const handleTakePhoto = async () => {
+    try {
+      const file = await CameraService.takePicture();
+      if (file) {
+        setImageFile(file);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      alert('Failed to take photo. Please try again.');
+    }
+  };
+
+  const handleSelectFromGallery = async () => {
+    try {
+      const file = await CameraService.selectFromGallery();
+      if (file) {
+        setImageFile(file);
+      }
+    } catch (error) {
+      console.error('Error selecting from gallery:', error);
+      alert('Failed to select image. Please try again.');
+    }
+  };
+
+  const handleManualUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -161,6 +185,11 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+      {/* Top Ad Space - Reserved */}
+      <div className="w-full h-12 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg mb-4 flex items-center justify-center">
+        <div className="text-xs text-gray-400 dark:text-gray-500">Ad Space Reserved</div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
@@ -318,18 +347,43 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
               />
             </div>
 
-            {/* Document Upload */}
+            {/* Document Photo/Upload */}
             <div className="space-y-2">
               <Label className="text-gray-700 dark:text-gray-300">Document Image (Optional)</Label>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleImageCapture}
-                className="w-full mobile-tap"
-              >
-                <Camera className="h-4 w-4 mr-2" />
-                {imageFile ? `Selected: ${imageFile.name}` : 'Take Photo or Upload Document'}
-              </Button>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTakePhoto}
+                  className="mobile-tap"
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Take Photo
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSelectFromGallery}
+                  className="mobile-tap"
+                >
+                  <Image className="h-4 w-4 mr-2" />
+                  From Gallery
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleManualUpload}
+                  className="mobile-tap"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Browse Files
+                </Button>
+              </div>
+              {imageFile && (
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                  Selected: {imageFile.name}
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}
