@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,10 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, ArrowUp, Camera, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Document, DocumentType, ReminderPeriod, Entity } from '@/types';
-import { StorageService } from '@/services/storageService';
+import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { NotificationService } from '@/services/notificationService';
 import { getAllDocumentTypeOptions } from '@/utils/documentIcons';
-import { EntityService } from '@/services/entityService';
 import { cn } from '@/lib/utils';
 
 interface AddDocumentFormProps {
@@ -35,6 +35,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const reminderOptions = [
     { value: '1_week', label: '1 Week Before' },
@@ -48,8 +49,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
   ];
 
   useEffect(() => {
-    const loadedEntities = EntityService.getEntities();
-    setEntities(loadedEntities);
+    loadEntities();
 
     if (editingDocument) {
       setFormData({
@@ -64,6 +64,15 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     }
   }, [editingDocument]);
 
+  const loadEntities = async () => {
+    try {
+      const loadedEntities = await SupabaseStorageService.getEntities();
+      setEntities(loadedEntities);
+    } catch (error) {
+      console.error('Error loading entities:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -75,38 +84,56 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     setIsSubmitting(true);
 
     try {
+      let imageUrl = formData.imageUrl;
+      
+      // Upload image if selected
+      if (imageFile) {
+        const uploadedUrl = await SupabaseStorageService.uploadDocumentImage(imageFile);
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+        }
+      }
+
       if (editingDocument) {
-        const updatedDocument: Document = {
+        await SupabaseStorageService.updateDocument(editingDocument.id, {
+          name: formData.name.trim(),
+          type: formData.type,
+          expiryDate: formData.expiryDate,
+          reminderPeriod: formData.reminderPeriod,
+          notes: formData.notes.trim(),
+          imageUrl: imageUrl,
+          entityId: formData.entityId
+        });
+        
+        await NotificationService.scheduleDocumentReminder({
           ...editingDocument,
           name: formData.name.trim(),
           type: formData.type,
           expiryDate: formData.expiryDate,
           reminderPeriod: formData.reminderPeriod,
           notes: formData.notes.trim(),
-          imageUrl: formData.imageUrl,
-          entityId: formData.entityId,
-          updatedAt: new Date()
-        };
-        
-        StorageService.updateDocument(editingDocument.id, updatedDocument);
-        await NotificationService.scheduleDocumentReminder(updatedDocument);
+          imageUrl: imageUrl,
+          entityId: formData.entityId
+        });
       } else {
-        const newDocument: Document = {
-          id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        const newDocument = {
           name: formData.name.trim(),
           type: formData.type,
           expiryDate: formData.expiryDate,
           reminderPeriod: formData.reminderPeriod,
           notes: formData.notes.trim(),
-          imageUrl: formData.imageUrl,
+          imageUrl: imageUrl,
           entityId: formData.entityId,
-          isHandled: false,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          isHandled: false
         };
 
-        StorageService.addDocument(newDocument);
-        await NotificationService.scheduleDocumentReminder(newDocument);
+        await SupabaseStorageService.addDocument(newDocument);
+        await NotificationService.scheduleDocumentReminder({
+          ...newDocument,
+          id: `temp_${Date.now()}`,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
       }
       
       console.log('Document saved successfully');
@@ -120,11 +147,16 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
   };
 
   const handleImageCapture = () => {
-    alert('Camera functionality will be implemented with Capacitor Camera plugin');
-  };
-
-  const getEntityById = (entityId: string) => {
-    return entities.find(e => e.id === entityId);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        setImageFile(file);
+      }
+    };
+    input.click();
   };
 
   return (
@@ -296,7 +328,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 className="w-full mobile-tap"
               >
                 <Camera className="h-4 w-4 mr-2" />
-                Take Photo or Upload Document
+                {imageFile ? `Selected: ${imageFile.name}` : 'Take Photo or Upload Document'}
               </Button>
             </div>
 

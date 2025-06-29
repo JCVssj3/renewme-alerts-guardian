@@ -9,7 +9,144 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      custom_document_types: {
+        Row: {
+          created_at: string
+          icon: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          icon: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          expiry_date: string
+          id: string
+          image_url: string | null
+          is_handled: boolean | null
+          name: string
+          notes: string | null
+          reminder_period: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          expiry_date: string
+          id?: string
+          image_url?: string | null
+          is_handled?: boolean | null
+          name: string
+          notes?: string | null
+          reminder_period: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          expiry_date?: string
+          id?: string
+          image_url?: string | null
+          is_handled?: boolean | null
+          name?: string
+          notes?: string | null
+          reminder_period?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      entities: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          tag: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          icon?: string | null
+          id: string
+          name: string
+          tag?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          tag?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          default_reminder_period: string | null
+          id: string
+          notifications_enabled: boolean | null
+          notifications_sound: boolean | null
+          notifications_vibration: boolean | null
+          theme: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_reminder_period?: string | null
+          id?: string
+          notifications_enabled?: boolean | null
+          notifications_sound?: boolean | null
+          notifications_vibration?: boolean | null
+          theme?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_reminder_period?: string | null
+          id?: string
+          notifications_enabled?: boolean | null
+          notifications_sound?: boolean | null
+          notifications_vibration?: boolean | null
+          theme?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

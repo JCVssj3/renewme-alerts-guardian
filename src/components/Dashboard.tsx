@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Bell, Settings, Calendar, Edit, Trash2 } from 'lucide-react';
 import { Document, SortOption } from '@/types';
-import { StorageService } from '@/services/storageService';
+import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { NotificationService } from '@/services/notificationService';
 import { calculateDaysUntilExpiry, getUrgencyStatus, formatExpiryDate } from '@/utils/dateUtils';
 import { getDocumentIcon, getDocumentTypeLabel } from '@/utils/documentIcons';
@@ -20,6 +19,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
   const [documents, setDocuments] = useState<Document[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('urgency');
   const [filterType, setFilterType] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadDocuments();
@@ -28,9 +28,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
     NotificationService.requestPermissions();
   }, []);
 
-  const loadDocuments = () => {
-    const docs = StorageService.getDocuments();
-    setDocuments(docs);
+  const loadDocuments = async () => {
+    try {
+      setLoading(true);
+      const docs = await SupabaseStorageService.getDocuments();
+      setDocuments(docs);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const sortDocuments = (docs: Document[]): Document[] => {
@@ -59,16 +66,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
   };
 
   const handleMarkAsHandled = async (documentId: string) => {
-    StorageService.updateDocument(documentId, { isHandled: true });
-    await NotificationService.cancelDocumentReminder(documentId);
-    loadDocuments();
+    try {
+      await SupabaseStorageService.updateDocument(documentId, { isHandled: true });
+      await NotificationService.cancelDocumentReminder(documentId);
+      loadDocuments();
+    } catch (error) {
+      console.error('Error marking document as handled:', error);
+    }
   };
 
   const handleDeleteDocument = async (documentId: string) => {
     if (confirm('Are you sure you want to delete this document?')) {
-      StorageService.deleteDocument(documentId);
-      await NotificationService.cancelDocumentReminder(documentId);
-      loadDocuments();
+      try {
+        await SupabaseStorageService.deleteDocument(documentId);
+        await NotificationService.cancelDocumentReminder(documentId);
+        loadDocuments();
+      } catch (error) {
+        console.error('Error deleting document:', error);
+      }
     }
   };
 
@@ -78,6 +93,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
 
   const filteredAndSortedDocs = sortDocuments(filterDocuments(documents));
   const urgentDocs = documents.filter(doc => getUrgencyStatus(doc.expiryDate) === 'danger' || getUrgencyStatus(doc.expiryDate) === 'expired');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-2 sm:p-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg text-gray-600 dark:text-gray-300">Loading your documents...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-2 sm:p-4">
