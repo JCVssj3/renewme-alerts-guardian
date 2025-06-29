@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,16 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, ArrowUp, Camera, Image, Plus } from 'lucide-react';
-import { format } from 'date-fns';
+import { ArrowUp, Camera, Image, Plus } from 'lucide-react';
 import { Document, DocumentType, ReminderPeriod, Entity } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
+import { EntityService } from '@/services/entityService';
 import { NotificationService } from '@/services/notificationService';
 import { CameraService } from '@/services/cameraService';
 import { getAllDocumentTypeOptions } from '@/utils/documentIcons';
-import { cn } from '@/lib/utils';
+import BubbleDateSelector from '@/components/BubbleDateSelector';
 
 interface AddDocumentFormProps {
   onBack: () => void;
@@ -64,13 +63,9 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     }
   }, [editingDocument]);
 
-  const loadEntities = async () => {
-    try {
-      const loadedEntities = await SupabaseStorageService.getEntities();
-      setEntities(loadedEntities);
-    } catch (error) {
-      console.error('Error loading entities:', error);
-    }
+  const loadEntities = () => {
+    const loadedEntities = EntityService.getEntities();
+    setEntities(loadedEntities);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -229,7 +224,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 <SelectTrigger className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
                   <SelectValue placeholder="Select entity" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
                   {entities.map((entity) => (
                     <SelectItem key={entity.id} value={entity.id}>
                       <div className="flex items-center space-x-2">
@@ -272,7 +267,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 <SelectTrigger className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
                   <SelectValue placeholder="Select document type" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
                   {getAllDocumentTypeOptions().map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center space-x-2">
@@ -288,30 +283,10 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
             {/* Expiry Date */}
             <div className="space-y-2">
               <Label className="text-gray-700 dark:text-gray-300">Expiry Date *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600",
-                      !formData.expiryDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.expiryDate ? format(formData.expiryDate, "PPP") : "Pick expiry date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.expiryDate}
-                    onSelect={(date) => setFormData({ ...formData, expiryDate: date })}
-                    disabled={(date) => date < new Date()}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              <BubbleDateSelector
+                selectedDate={formData.expiryDate}
+                onDateChange={(date) => setFormData({ ...formData, expiryDate: date })}
+              />
             </div>
 
             {/* Reminder Period */}
@@ -324,7 +299,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 <SelectTrigger className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
                   {reminderOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
