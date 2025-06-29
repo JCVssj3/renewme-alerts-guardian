@@ -1,5 +1,9 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Document, AppSettings, Entity, CustomDocumentType, ReminderPeriod } from '@/types';
+
+// Generate a consistent anonymous user UUID
+const ANONYMOUS_USER_ID = '00000000-0000-0000-0000-000000000000';
 
 export class SupabaseStorageService {
   // Documents
@@ -8,6 +12,7 @@ export class SupabaseStorageService {
       const { data, error } = await supabase
         .from('documents')
         .select('*')
+        .eq('user_id', ANONYMOUS_USER_ID)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -33,7 +38,7 @@ export class SupabaseStorageService {
       const { error } = await supabase
         .from('documents')
         .insert({
-          user_id: 'anonymous', // Temporary user ID since auth is removed
+          user_id: ANONYMOUS_USER_ID,
           name: document.name,
           type: document.type,
           expiry_date: document.expiryDate.toISOString(),
@@ -67,7 +72,8 @@ export class SupabaseStorageService {
       const { error } = await supabase
         .from('documents')
         .update(updateData)
-        .eq('id', documentId);
+        .eq('id', documentId)
+        .eq('user_id', ANONYMOUS_USER_ID);
 
       if (error) throw error;
     } catch (error) {
@@ -81,7 +87,8 @@ export class SupabaseStorageService {
       const { error } = await supabase
         .from('documents')
         .delete()
-        .eq('id', documentId);
+        .eq('id', documentId)
+        .eq('user_id', ANONYMOUS_USER_ID);
 
       if (error) throw error;
     } catch (error) {
@@ -96,6 +103,7 @@ export class SupabaseStorageService {
       const { data, error } = await supabase
         .from('entities')
         .select('*')
+        .eq('user_id', ANONYMOUS_USER_ID)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -123,7 +131,7 @@ export class SupabaseStorageService {
         .from('entities')
         .insert({
           id: 'self',
-          user_id: 'anonymous',
+          user_id: ANONYMOUS_USER_ID,
           name: 'Myself',
           tag: 'Personal',
           icon: '👤',
@@ -140,7 +148,7 @@ export class SupabaseStorageService {
         .from('entities')
         .insert({
           id: entity.id,
-          user_id: 'anonymous',
+          user_id: ANONYMOUS_USER_ID,
           name: entity.name,
           tag: entity.tag,
           icon: entity.icon,
@@ -166,7 +174,8 @@ export class SupabaseStorageService {
       const { error } = await supabase
         .from('entities')
         .update(updateData)
-        .eq('id', entityId);
+        .eq('id', entityId)
+        .eq('user_id', ANONYMOUS_USER_ID);
 
       if (error) throw error;
     } catch (error) {
@@ -182,7 +191,8 @@ export class SupabaseStorageService {
       const { error } = await supabase
         .from('entities')
         .delete()
-        .eq('id', entityId);
+        .eq('id', entityId)
+        .eq('user_id', ANONYMOUS_USER_ID);
 
       if (error) throw error;
     } catch (error) {
@@ -197,6 +207,7 @@ export class SupabaseStorageService {
       const { data, error } = await supabase
         .from('custom_document_types')
         .select('*')
+        .eq('user_id', ANONYMOUS_USER_ID)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -216,7 +227,7 @@ export class SupabaseStorageService {
       const { error } = await supabase
         .from('custom_document_types')
         .insert({
-          user_id: 'anonymous',
+          user_id: ANONYMOUS_USER_ID,
           name: type.name,
           icon: type.icon
         });
@@ -233,7 +244,8 @@ export class SupabaseStorageService {
       const { error } = await supabase
         .from('custom_document_types')
         .delete()
-        .eq('id', typeId);
+        .eq('id', typeId)
+        .eq('user_id', ANONYMOUS_USER_ID);
 
       if (error) throw error;
     } catch (error) {
@@ -248,7 +260,7 @@ export class SupabaseStorageService {
       const { data, error } = await supabase
         .from('user_settings')
         .select('*')
-        .eq('user_id', 'anonymous')
+        .eq('user_id', ANONYMOUS_USER_ID)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
@@ -287,7 +299,7 @@ export class SupabaseStorageService {
       await supabase
         .from('user_settings')
         .insert({
-          user_id: 'anonymous',
+          user_id: ANONYMOUS_USER_ID,
           theme: 'system',
           notifications_enabled: true,
           notifications_sound: true,
@@ -304,7 +316,7 @@ export class SupabaseStorageService {
       const { error } = await supabase
         .from('user_settings')
         .upsert({
-          user_id: 'anonymous',
+          user_id: ANONYMOUS_USER_ID,
           theme: settings.theme,
           notifications_enabled: settings.notifications.enabled,
           notifications_sound: settings.notifications.sound,
