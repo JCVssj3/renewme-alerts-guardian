@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Document, AppSettings, Entity, CustomDocumentType } from '@/types';
+import { Document, AppSettings, Entity, CustomDocumentType, ReminderPeriod } from '@/types';
 
 export class SupabaseStorageService {
   // Documents
@@ -16,7 +16,7 @@ export class SupabaseStorageService {
       return data?.map(doc => ({
         ...doc,
         expiryDate: new Date(doc.expiry_date),
-        reminderPeriod: doc.reminder_period,
+        reminderPeriod: doc.reminder_period as ReminderPeriod,
         imageUrl: doc.image_url,
         entityId: doc.entity_id,
         isHandled: doc.is_handled,
@@ -277,7 +277,7 @@ export class SupabaseStorageService {
           enabled: data.notifications_enabled,
           sound: data.notifications_sound,
           vibration: data.notifications_vibration,
-          defaultReminderPeriod: data.default_reminder_period
+          defaultReminderPeriod: data.default_reminder_period as ReminderPeriod
         }
       };
     } catch (error) {
