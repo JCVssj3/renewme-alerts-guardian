@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -221,7 +222,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Entity Assignment */}
+            {/* Assign To */}
             <div className="space-y-2">
               <Label htmlFor="entity" className="text-gray-700 dark:text-gray-300">Assign To</Label>
               <Select 
@@ -252,7 +253,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Document Name */}
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-gray-700 dark:text-gray-300">Document Name *</Label>
+              <Label htmlFor="name" className="text-gray-700 dark:text-gray-300">Document Name</Label>
               <Input
                 id="name"
                 type="text"
@@ -266,7 +267,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Document Type */}
             <div className="space-y-2">
-              <Label htmlFor="type" className="text-gray-700 dark:text-gray-300">Document Type *</Label>
+              <Label htmlFor="type" className="text-gray-700 dark:text-gray-300">Document Type</Label>
               <Select 
                 value={formData.type} 
                 onValueChange={(value: DocumentType) => setFormData({ ...formData, type: value })}
@@ -289,7 +290,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Expiry Date */}
             <div className="space-y-2">
-              <Label htmlFor="expiryDate" className="text-gray-700 dark:text-gray-300">Expiry Date *</Label>
+              <Label htmlFor="expiryDate" className="text-gray-700 dark:text-gray-300">Expiry Date</Label>
               <Input
                 id="expiryDate"
                 type="date"
@@ -303,7 +304,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
               />
             </div>
 
-            {/* Reminder Period */}
+            {/* Reminder Timeframe */}
             <div className="space-y-2">
               <Label htmlFor="reminder" className="text-gray-700 dark:text-gray-300">Reminder Timeframe</Label>
               <Select 
@@ -323,7 +324,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
               </Select>
             </div>
 
-            {/* Notes */}
+            {/* Notes (Optional) */}
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-gray-700 dark:text-gray-300">Notes (Optional)</Label>
               <Textarea
@@ -336,9 +337,9 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
               />
             </div>
 
-            {/* Document Photo/Upload */}
+            {/* Document Image */}
             <div className="space-y-2">
-              <Label className="text-gray-700 dark:text-gray-300">Document Image (Optional)</Label>
+              <Label className="text-gray-700 dark:text-gray-300">Document Image</Label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <Button
                   type="button"
@@ -375,7 +376,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
               )}
             </div>
 
-            {/* Submit Button */}
+            {/* Save Button */}
             <Button 
               type="submit" 
               className="w-full mobile-tap bg-primary hover:bg-primary/90"
