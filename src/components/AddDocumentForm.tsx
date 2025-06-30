@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,6 @@ import { EntityService } from '@/services/entityService';
 import { NotificationService } from '@/services/notificationService';
 import { CameraService } from '@/services/cameraService';
 import { getAllDocumentTypeOptions } from '@/utils/documentIcons';
-import BubbleDateSelector from '@/components/BubbleDateSelector';
 
 interface AddDocumentFormProps {
   onBack: () => void;
@@ -187,6 +185,11 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     input.click();
   };
 
+  const formatDateForInput = (date?: Date) => {
+    if (!date) return '';
+    return date.toISOString().split('T')[0];
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
       {/* Header */}
@@ -286,10 +289,17 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Expiry Date */}
             <div className="space-y-2">
-              <Label className="text-gray-700 dark:text-gray-300">Expiry Date *</Label>
-              <BubbleDateSelector
-                selectedDate={formData.expiryDate}
-                onDateChange={(date) => setFormData({ ...formData, expiryDate: date })}
+              <Label htmlFor="expiryDate" className="text-gray-700 dark:text-gray-300">Expiry Date *</Label>
+              <Input
+                id="expiryDate"
+                type="date"
+                value={formatDateForInput(formData.expiryDate)}
+                onChange={(e) => {
+                  const date = e.target.value ? new Date(e.target.value) : undefined;
+                  setFormData({ ...formData, expiryDate: date });
+                }}
+                required
+                className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
               />
             </div>
 
