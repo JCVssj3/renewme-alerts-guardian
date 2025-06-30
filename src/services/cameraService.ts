@@ -32,9 +32,7 @@ export class CameraService {
 
       console.log('Camera photo result:', { 
         hasDataUrl: !!image.dataUrl, 
-        format: image.format,
-        width: image.width,
-        height: image.height 
+        format: image.format
       });
 
       if (image.dataUrl) {
@@ -72,9 +70,7 @@ export class CameraService {
 
       console.log('Gallery photo result:', { 
         hasDataUrl: !!image.dataUrl, 
-        format: image.format,
-        width: image.width,
-        height: image.height 
+        format: image.format
       });
 
       if (image.dataUrl) {
