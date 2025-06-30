@@ -41,11 +41,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top Ad Strip - Reserved Space */}
-      <div className="w-full h-16 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-center">
-        <div className="text-xs text-gray-400 dark:text-gray-500">Ad Space Reserved</div>
-      </div>
-
       {currentView === 'dashboard' && (
         <Dashboard 
           onAddDocument={handleAddDocument}
@@ -65,11 +60,6 @@ const Index = () => {
       {currentView === 'settings' && (
         <Settings onBack={handleBack} />
       )}
-
-      {/* Bottom Ad Strip - Reserved Space */}
-      <div className="w-full h-12 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-center">
-        <div className="text-xs text-gray-400 dark:text-gray-500">Ad Space Reserved</div>
-      </div>
     </div>
   );
 };

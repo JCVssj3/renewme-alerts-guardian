@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowUp, Camera, Image, Plus } from 'lucide-react';
+import { ArrowUp, Camera, Image, Plus, CheckCircle } from 'lucide-react';
 import { Document, DocumentType, ReminderPeriod, Entity } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { EntityService } from '@/services/entityService';
@@ -35,6 +35,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [cameraTestResult, setCameraTestResult] = useState<string>('');
 
   const reminderOptions = [
     { value: '1_week', label: '1 Week Before' },
@@ -71,6 +72,8 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Form submission started with data:', formData);
+    
     if (!formData.name || !formData.type || !formData.expiryDate) {
       alert('Please fill in all required fields');
       return;
@@ -83,13 +86,16 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       
       // Upload image if selected
       if (imageFile) {
+        console.log('Uploading image file:', imageFile.name);
         const uploadedUrl = await SupabaseStorageService.uploadDocumentImage(imageFile);
         if (uploadedUrl) {
           imageUrl = uploadedUrl;
+          console.log('Image uploaded successfully:', uploadedUrl);
         }
       }
 
       if (editingDocument) {
+        console.log('Updating existing document:', editingDocument.id);
         await SupabaseStorageService.updateDocument(editingDocument.id, {
           name: formData.name.trim(),
           type: formData.type,
@@ -122,6 +128,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
           isHandled: false
         };
 
+        console.log('Adding new document:', newDocument);
         await SupabaseStorageService.addDocument(newDocument);
         await NotificationService.scheduleDocumentReminder({
           ...newDocument,
@@ -143,24 +150,36 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
   const handleTakePhoto = async () => {
     try {
+      setCameraTestResult('Testing camera...');
       const file = await CameraService.takePicture();
       if (file) {
         setImageFile(file);
+        setCameraTestResult('✅ Camera test successful! Photo captured.');
+        console.log('Photo captured successfully:', file.name);
+      } else {
+        setCameraTestResult('❌ Camera test failed - no photo captured.');
       }
     } catch (error) {
       console.error('Error taking photo:', error);
+      setCameraTestResult(`❌ Camera test failed: ${error.message}`);
       alert('Failed to take photo. Please try again.');
     }
   };
 
   const handleSelectFromGallery = async () => {
     try {
+      setCameraTestResult('Testing gallery access...');
       const file = await CameraService.selectFromGallery();
       if (file) {
         setImageFile(file);
+        setCameraTestResult('✅ Gallery test successful! Image selected.');
+        console.log('Image selected successfully:', file.name);
+      } else {
+        setCameraTestResult('❌ Gallery test failed - no image selected.');
       }
     } catch (error) {
       console.error('Error selecting from gallery:', error);
+      setCameraTestResult(`❌ Gallery test failed: ${error.message}`);
       alert('Failed to select image. Please try again.');
     }
   };
@@ -173,18 +192,30 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         setImageFile(file);
+        setCameraTestResult('✅ File upload successful! Image selected.');
+        console.log('Manual file upload successful:', file.name);
       }
     };
     input.click();
   };
 
+  const testCameraPermissions = async () => {
+    try {
+      setCameraTestResult('Testing camera permissions...');
+      const hasPermission = await CameraService.requestPermissions();
+      if (hasPermission) {
+        setCameraTestResult('✅ Camera permissions granted!');
+      } else {
+        setCameraTestResult('❌ Camera permissions denied.');
+      }
+    } catch (error) {
+      console.error('Error testing camera permissions:', error);
+      setCameraTestResult(`❌ Permission test failed: ${error.message}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      {/* Top Ad Space - Reserved */}
-      <div className="w-full h-12 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg mb-4 flex items-center justify-center">
-        <div className="text-xs text-gray-400 dark:text-gray-500">Ad Space Reserved</div>
-      </div>
-
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
@@ -320,6 +351,25 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 rows={3}
                 className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
               />
+            </div>
+
+            {/* Camera Test Section */}
+            <div className="space-y-2">
+              <Label className="text-gray-700 dark:text-gray-300">Camera System Test</Label>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={testCameraPermissions}
+                className="mobile-tap w-full"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Test Camera Permissions
+              </Button>
+              {cameraTestResult && (
+                <div className="text-sm p-2 bg-gray-100 dark:bg-gray-700 rounded">
+                  {cameraTestResult}
+                </div>
+              )}
             </div>
 
             {/* Document Photo/Upload */}

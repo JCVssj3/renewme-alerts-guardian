@@ -21,6 +21,9 @@ const config: CapacitorConfig = {
     Camera: {
       ios: {
         requestPermissions: true
+      },
+      android: {
+        requestPermissions: true
       }
     }
   }

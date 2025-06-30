@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -135,11 +136,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
         </div>
       </div>
 
-      {/* Side Ad Space - Reserved for future use */}
-      <div className="hidden lg:block fixed right-4 top-1/2 transform -translate-y-1/2 w-32 h-96 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center">
-        <div className="text-xs text-gray-400 dark:text-gray-500 rotate-90">Ad Space</div>
-      </div>
-
       {/* Statistics Cards - Mobile Optimized */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <Card className="card-shadow">
@@ -173,11 +169,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
             <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Warning</div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Banner Ad Space - Reserved for future use */}
-      <div className="w-full h-20 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg mb-4 flex items-center justify-center">
-        <div className="text-xs text-gray-400 dark:text-gray-500">Banner Ad Space Reserved</div>
       </div>
 
       {/* Sort and Filter Controls - Mobile Optimized */}
@@ -225,94 +216,85 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
         </Card>
       ) : (
         <div className="space-y-3 sm:space-y-4">
-          {filteredAndSortedDocs.map((document, index) => {
+          {filteredAndSortedDocs.map((document) => {
             const urgency = getUrgencyStatus(document.expiryDate);
             const daysLeft = calculateDaysUntilExpiry(document.expiryDate);
             
             return (
-              <React.Fragment key={document.id}>
-                {/* Inline Ad Space - Show after every 3rd document */}
-                {index > 0 && (index + 1) % 3 === 0 && (
-                  <div className="w-full h-16 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center my-2">
-                    <div className="text-xs text-gray-400 dark:text-gray-500">Inline Ad Space Reserved</div>
-                  </div>
-                )}
-                
-                <Card className="card-shadow mobile-tap">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start space-x-3 flex-1 min-w-0">
-                        <div className="text-xl sm:text-2xl flex-shrink-0">{getDocumentIcon(document.type)}</div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-800 dark:text-white text-sm sm:text-base truncate">{document.name}</h3>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">{getDocumentTypeLabel(document.type)}</p>
-                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Expires: {formatExpiryDate(document.expiryDate)}</p>
-                          {document.notes && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 break-words">{document.notes}</p>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end space-y-2 flex-shrink-0">
-                        <Badge 
-                          className={`text-xs whitespace-nowrap ${
-                            urgency === 'safe' ? 'bg-green-100 text-green-800 border-green-200' :
-                            urgency === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                            urgency === 'danger' ? 'bg-red-100 text-red-800 border-red-200' :
-                            'bg-red-200 text-red-900 border-red-300'
-                          }`}
-                        >
-                          {daysLeft < 0 ? 'Expired' : 
-                           daysLeft === 0 ? 'Today' :
-                           daysLeft === 1 ? '1 Day' :
-                           `${daysLeft} Days`}
-                        </Badge>
-                        
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onEditDocument(document)}
-                            className="mobile-tap h-7 w-7 p-0"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteDocument(document.id)}
-                            className="mobile-tap text-red-600 hover:text-red-700 h-7 w-7 p-0"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                          {urgency === 'danger' || urgency === 'expired' ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleSendUrgentAlert(document)}
-                                className="mobile-tap h-7 w-7 p-0"
-                              >
-                                <Bell className="h-3 w-3" />
-                              </Button>
-                              {!document.isHandled && (
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => handleMarkAsHandled(document.id)}
-                                  className="mobile-tap text-xs px-2 h-7"
-                                >
-                                  Handle
-                                </Button>
-                              )}
-                            </>
-                          ) : null}
-                        </div>
+              <Card key={document.id} className="card-shadow mobile-tap">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start space-x-3 flex-1 min-w-0">
+                      <div className="text-xl sm:text-2xl flex-shrink-0">{getDocumentIcon(document.type)}</div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-800 dark:text-white text-sm sm:text-base truncate">{document.name}</h3>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">{getDocumentTypeLabel(document.type)}</p>
+                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Expires: {formatExpiryDate(document.expiryDate)}</p>
+                        {document.notes && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 break-words">{document.notes}</p>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </React.Fragment>
+                    
+                    <div className="flex flex-col items-end space-y-2 flex-shrink-0">
+                      <Badge 
+                        className={`text-xs whitespace-nowrap ${
+                          urgency === 'safe' ? 'bg-green-100 text-green-800 border-green-200' :
+                          urgency === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                          urgency === 'danger' ? 'bg-red-100 text-red-800 border-red-200' :
+                          'bg-red-200 text-red-900 border-red-300'
+                        }`}
+                      >
+                        {daysLeft < 0 ? 'Expired' : 
+                         daysLeft === 0 ? 'Today' :
+                         daysLeft === 1 ? '1 Day' :
+                         `${daysLeft} Days`}
+                      </Badge>
+                      
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onEditDocument(document)}
+                          className="mobile-tap h-7 w-7 p-0"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteDocument(document.id)}
+                          className="mobile-tap text-red-600 hover:text-red-700 h-7 w-7 p-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                        {urgency === 'danger' || urgency === 'expired' ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSendUrgentAlert(document)}
+                              className="mobile-tap h-7 w-7 p-0"
+                            >
+                              <Bell className="h-3 w-3" />
+                            </Button>
+                            {!document.isHandled && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleMarkAsHandled(document.id)}
+                                className="mobile-tap text-xs px-2 h-7"
+                              >
+                                Handle
+                              </Button>
+                            )}
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
