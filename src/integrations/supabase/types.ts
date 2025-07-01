@@ -15,21 +15,21 @@ export type Database = {
           icon: string
           id: string
           name: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           icon: string
           id?: string
           name: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           icon?: string
           id?: string
           name?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -46,7 +46,7 @@ export type Database = {
           reminder_period: string
           type: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -60,7 +60,7 @@ export type Database = {
           reminder_period: string
           type: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -74,7 +74,7 @@ export type Database = {
           reminder_period?: string
           type?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -87,7 +87,7 @@ export type Database = {
           name: string
           tag: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           color: string
@@ -97,7 +97,7 @@ export type Database = {
           name: string
           tag?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           color?: string
@@ -107,7 +107,7 @@ export type Database = {
           name?: string
           tag?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -121,7 +121,7 @@ export type Database = {
           notifications_vibration: boolean | null
           theme: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -132,7 +132,7 @@ export type Database = {
           notifications_vibration?: boolean | null
           theme?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -143,7 +143,7 @@ export type Database = {
           notifications_vibration?: boolean | null
           theme?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
