@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowUp, Camera, Image, Plus } from 'lucide-react';
-import { Document, DocumentType, ReminderPeriod, Entity } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ArrowUp, Plus, User, FileText } from 'lucide-react';
+import { Document, DocumentType, ReminderPeriod, Entity, CustomDocumentType } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { EntityService } from '@/services/entityService';
+import { CustomDocumentService } from '@/services/customDocumentService';
 import { NotificationService } from '@/services/notificationService';
-import { CameraService } from '@/services/cameraService';
 import { getAllDocumentTypeOptions } from '@/utils/documentIcons';
 
 interface AddDocumentFormProps {
@@ -22,6 +22,7 @@ interface AddDocumentFormProps {
 
 const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, editingDocument }) => {
   const [entities, setEntities] = useState<Entity[]>([]);
+  const [customDocumentTypes, setCustomDocumentTypes] = useState<CustomDocumentType[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     type: '' as DocumentType,
@@ -34,6 +35,22 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  
+  // Add Entity Dialog State
+  const [isAddEntityDialogOpen, setIsAddEntityDialogOpen] = useState(false);
+  const [entityFormData, setEntityFormData] = useState({
+    name: '',
+    tag: '',
+    icon: '👤',
+    color: '#3B82F6'
+  });
+  
+  // Add Document Type Dialog State
+  const [isAddTypeDialogOpen, setIsAddTypeDialogOpen] = useState(false);
+  const [typeFormData, setTypeFormData] = useState({
+    name: '',
+    icon: '📄'
+  });
 
   const reminderOptions = [
     { value: '1_week', label: '1 Week Before' },
@@ -46,8 +63,13 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     { value: '12_months', label: '12 Months Before' }
   ];
 
+  const entityIcons = ['👤', '👨', '👩', '👶', '👴', '👵', '👨‍💼', '👩‍💼', '👨‍⚕️', '👩‍⚕️', '🏢', '🏠'];
+  const entityColors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+  const documentIcons = ['📄', '📋', '📜', '🆔', '🛂', '🚗', '🛡️', '✈️', '🎫', '📊', '📈', '💼', '🏠', '⚕️', '🎓', '🏛️'];
+
   useEffect(() => {
     loadEntities();
+    loadCustomDocumentTypes();
 
     if (editingDocument) {
       setFormData({
@@ -65,6 +87,11 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
   const loadEntities = () => {
     const loadedEntities = EntityService.getEntities();
     setEntities(loadedEntities);
+  };
+
+  const loadCustomDocumentTypes = () => {
+    const types = CustomDocumentService.getCustomDocumentTypes();
+    setCustomDocumentTypes(types);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -146,32 +173,6 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     }
   };
 
-  const handleTakePhoto = async () => {
-    try {
-      const file = await CameraService.takePicture();
-      if (file) {
-        setImageFile(file);
-        console.log('Photo captured successfully:', file.name);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
-      alert('Failed to take photo. Please try again.');
-    }
-  };
-
-  const handleSelectFromGallery = async () => {
-    try {
-      const file = await CameraService.selectFromGallery();
-      if (file) {
-        setImageFile(file);
-        console.log('Image selected successfully:', file.name);
-      }
-    } catch (error) {
-      console.error('Error selecting from gallery:', error);
-      alert('Failed to select image. Please try again.');
-    }
-  };
-
   const handleManualUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -186,15 +187,46 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     input.click();
   };
 
+  const handleAddEntity = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!entityFormData.name.trim()) return;
+
+    const newEntity = EntityService.addEntity(entityFormData);
+    loadEntities();
+    setFormData({ ...formData, entityId: newEntity.id });
+    setEntityFormData({ name: '', tag: '', icon: '👤', color: '#3B82F6' });
+    setIsAddEntityDialogOpen(false);
+  };
+
+  const handleAddDocumentType = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!typeFormData.name.trim()) return;
+
+    CustomDocumentService.addCustomDocumentType(typeFormData);
+    loadCustomDocumentTypes();
+    setTypeFormData({ name: '', icon: '📄' });
+    setIsAddTypeDialogOpen(false);
+  };
+
   const formatDateForInput = (date?: Date) => {
     if (!date) return '';
     return date.toISOString().split('T')[0];
   };
 
+  const getAllDocumentOptions = () => {
+    const standardOptions = getAllDocumentTypeOptions();
+    const customOptions = customDocumentTypes.map(type => ({
+      value: type.id,
+      label: type.name,
+      icon: type.icon
+    }));
+    return [...standardOptions, ...customOptions];
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 pt-12">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8 mt-8">
         <div className="flex items-center space-x-3">
           <Button 
             variant="outline" 
@@ -224,7 +256,85 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Assign To */}
             <div className="space-y-2">
-              <Label htmlFor="entity" className="text-gray-700 dark:text-gray-300">Assign To</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="entity" className="text-gray-700 dark:text-gray-300">Assign To</Label>
+                <Dialog open={isAddEntityDialogOpen} onOpenChange={setIsAddEntityDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button type="button" variant="outline" size="sm" className="mobile-tap">
+                      <User className="h-3 w-3 mr-1" />
+                      Add Entity
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-white dark:bg-gray-800">
+                    <DialogHeader>
+                      <DialogTitle>Add New Entity</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAddEntity} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="entityName">Name *</Label>
+                        <Input
+                          id="entityName"
+                          value={entityFormData.name}
+                          onChange={(e) => setEntityFormData({ ...entityFormData, name: e.target.value })}
+                          placeholder="e.g., John Smith"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="entityTag">Tag</Label>
+                        <Input
+                          id="entityTag"
+                          value={entityFormData.tag}
+                          onChange={(e) => setEntityFormData({ ...entityFormData, tag: e.target.value })}
+                          placeholder="e.g., Family, Work"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Icon</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {entityIcons.map((icon) => (
+                            <Button
+                              key={icon}
+                              type="button"
+                              variant={entityFormData.icon === icon ? 'default' : 'outline'}
+                              className="w-10 h-10 p-0"
+                              onClick={() => setEntityFormData({ ...entityFormData, icon })}
+                            >
+                              {icon}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Color</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {entityColors.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              className={`w-8 h-8 rounded-full border-2 ${
+                                entityFormData.color === color ? 'border-gray-800' : 'border-gray-300'
+                              }`}
+                              style={{ backgroundColor: color }}
+                              onClick={() => setEntityFormData({ ...entityFormData, color })}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button type="submit" className="flex-1">Add Entity</Button>
+                        <Button type="button" variant="outline" onClick={() => setIsAddEntityDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
               <Select 
                 value={formData.entityId} 
                 onValueChange={(value) => setFormData({ ...formData, entityId: value })}
@@ -267,7 +377,58 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Document Type */}
             <div className="space-y-2">
-              <Label htmlFor="type" className="text-gray-700 dark:text-gray-300">Document Type</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="type" className="text-gray-700 dark:text-gray-300">Document Type</Label>
+                <Dialog open={isAddTypeDialogOpen} onOpenChange={setIsAddTypeDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button type="button" variant="outline" size="sm" className="mobile-tap">
+                      <FileText className="h-3 w-3 mr-1" />
+                      Add Type
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-white dark:bg-gray-800">
+                    <DialogHeader>
+                      <DialogTitle>Add Custom Document Type</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAddDocumentType} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="typeName">Type Name *</Label>
+                        <Input
+                          id="typeName"
+                          value={typeFormData.name}
+                          onChange={(e) => setTypeFormData({ ...typeFormData, name: e.target.value })}
+                          placeholder="e.g., Birth Certificate"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Icon</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {documentIcons.map((icon) => (
+                            <Button
+                              key={icon}
+                              type="button"
+                              variant={typeFormData.icon === icon ? 'default' : 'outline'}
+                              className="w-10 h-10 p-0"
+                              onClick={() => setTypeFormData({ ...typeFormData, icon })}
+                            >
+                              {icon}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button type="submit" className="flex-1">Add Type</Button>
+                        <Button type="button" variant="outline" onClick={() => setIsAddTypeDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
               <Select 
                 value={formData.type} 
                 onValueChange={(value: DocumentType) => setFormData({ ...formData, type: value })}
@@ -276,7 +437,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                   <SelectValue placeholder="Select document type" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
-                  {getAllDocumentTypeOptions().map((option) => (
+                  {getAllDocumentOptions().map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center space-x-2">
                         <span>{option.icon}</span>
@@ -340,35 +501,15 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
             {/* Document Image */}
             <div className="space-y-2">
               <Label className="text-gray-700 dark:text-gray-300">Document Image</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleTakePhoto}
-                  className="mobile-tap"
-                >
-                  <Camera className="h-4 w-4 mr-2" />
-                  Take Photo
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSelectFromGallery}
-                  className="mobile-tap"
-                >
-                  <Image className="h-4 w-4 mr-2" />
-                  From Gallery
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleManualUpload}
-                  className="mobile-tap"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Browse Files
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleManualUpload}
+                className="mobile-tap w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Browse Files
+              </Button>
               {imageFile && (
                 <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Selected: {imageFile.name}
