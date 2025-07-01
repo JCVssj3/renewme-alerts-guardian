@@ -4,6 +4,7 @@ import Dashboard from '@/components/Dashboard';
 import AddDocumentForm from '@/components/AddDocumentForm';
 import Settings from '@/components/Settings';
 import { Document } from '@/types';
+import { NotificationService } from '@/services/notificationService';
 
 type AppView = 'dashboard' | 'add-document' | 'edit-document' | 'settings';
 
@@ -13,6 +14,14 @@ const Index = () => {
 
   useEffect(() => {
     console.log('RenewMe app initialized');
+    
+    // Initialize notification system
+    const initNotifications = async () => {
+      await NotificationService.requestPermissions();
+      await NotificationService.initializeNotificationListeners();
+    };
+    
+    initNotifications();
   }, []);
 
   const handleAddDocument = () => {
