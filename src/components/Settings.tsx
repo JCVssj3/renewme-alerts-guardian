@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { ArrowUp, Bell, Settings as SettingsIcon, Users, FileText, Calendar, Shield, Zap, Trophy, Target } from 'lucide-react';
 import { AppSettings, ReminderPeriod } from '@/types';
 import { StorageService } from '@/services/storageService';
+import { EntityService } from '@/services/entityService';
 import EntityManagement from './EntityManagement';
 import CustomDocumentTypes from './CustomDocumentTypes';
 
@@ -27,7 +28,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
   // Stats for dashboard
   const documents = StorageService.getDocuments();
-  const entities = StorageService.getEntities();
+  const entities = EntityService.getEntities();
   const totalDocuments = documents.length;
   const expiringSoon = documents.filter(doc => {
     const daysLeft = Math.ceil((new Date(doc.expiryDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
@@ -91,7 +92,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen gradient-bg p-4 pt-12">
+    <div className="min-h-screen bg-primary-bg p-4 pt-12">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
@@ -228,7 +229,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     onClick={() => {
                       const data = {
                         documents: StorageService.getDocuments(),
-                        entities: StorageService.getEntities(),
+                        entities: EntityService.getEntities(),
                         settings: StorageService.getSettings()
                       };
                       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
