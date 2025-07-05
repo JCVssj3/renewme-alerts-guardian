@@ -97,35 +97,35 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-2 sm:p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-primary-bg p-2 sm:p-4 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-lg text-gray-600 dark:text-gray-300">Loading your documents...</div>
+          <div className="text-lg text-text-secondary">Loading your documents...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-2 sm:p-4">
+    <div className="min-h-screen bg-primary-bg p-2 sm:p-4">
       {/* Header - Mobile Optimized */}
       <div className="mb-4 sm:mb-6">
         <div className="flex items-start justify-between mb-3 sm:mb-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white truncate">RenewMe</h1>
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 truncate">Never miss a renewal again</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary truncate">RenewMe</h1>
+            <p className="text-sm sm:text-base text-text-secondary truncate">Never miss a renewal again</p>
           </div>
           <div className="flex gap-1 sm:gap-2 ml-2 flex-shrink-0">
             <Button 
               variant="outline" 
               size="icon"
               onClick={onSettings}
-              className="mobile-tap h-8 w-8 sm:h-10 sm:w-10"
+              className="mobile-tap h-8 w-8 sm:h-10 sm:w-10 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent"
             >
-              <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
+              <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary-accent" />
             </Button>
             <Button 
               onClick={onAddDocument}
-              className="mobile-tap bg-primary hover:bg-primary/90 h-8 sm:h-10 px-2 sm:px-4"
+              className="mobile-tap btn-primary h-8 sm:h-10 px-2 sm:px-4"
               size="sm"
             >
               <Plus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
@@ -138,35 +138,35 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
 
       {/* Statistics Cards - Mobile Optimized */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <Card className="card-shadow">
+        <Card className="card-shadow bg-card-bg border-primary-accent/10 card-hover">
           <CardContent className="p-3 sm:p-4 text-center">
-            <div className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">{documents.length}</div>
-            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Total</div>
+            <div className="text-xl sm:text-2xl font-bold text-text-primary">{documents.length}</div>
+            <div className="text-xs sm:text-sm text-text-secondary">Total</div>
           </CardContent>
         </Card>
         
-        <Card className="card-shadow">
+        <Card className="card-shadow bg-card-bg border-primary-accent/10 card-hover">
           <CardContent className="p-3 sm:p-4 text-center">
-            <div className="text-xl sm:text-2xl font-bold text-red-600">{urgentDocs.length}</div>
-            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Urgent</div>
+            <div className="text-xl sm:text-2xl font-bold text-status-danger">{urgentDocs.length}</div>
+            <div className="text-xs sm:text-sm text-text-secondary">Urgent</div>
           </CardContent>
         </Card>
 
-        <Card className="card-shadow">
+        <Card className="card-shadow bg-card-bg border-primary-accent/10 card-hover">
           <CardContent className="p-3 sm:p-4 text-center">
-            <div className="text-xl sm:text-2xl font-bold text-green-600">
+            <div className="text-xl sm:text-2xl font-bold text-status-success">
               {documents.filter(doc => getUrgencyStatus(doc.expiryDate) === 'safe').length}
             </div>
-            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Safe</div>
+            <div className="text-xs sm:text-sm text-text-secondary">Safe</div>
           </CardContent>
         </Card>
 
-        <Card className="card-shadow">
+        <Card className="card-shadow bg-card-bg border-primary-accent/10 card-hover">
           <CardContent className="p-3 sm:p-4 text-center">
-            <div className="text-xl sm:text-2xl font-bold text-yellow-600">
+            <div className="text-xl sm:text-2xl font-bold text-status-warning">
               {documents.filter(doc => getUrgencyStatus(doc.expiryDate) === 'warning').length}
             </div>
-            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Warning</div>
+            <div className="text-xs sm:text-sm text-text-secondary">Warning</div>
           </CardContent>
         </Card>
       </div>
@@ -176,7 +176,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
         <select 
           value={sortBy} 
           onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+          className="flex-1 px-3 py-2 rounded-lg border border-primary-accent/20 bg-card-bg text-text-primary text-sm focus:border-primary-accent"
         >
           <option value="urgency">Sort by Urgency</option>
           <option value="expiry_date">Sort by Expiry Date</option>
@@ -187,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
         <select 
           value={filterType} 
           onChange={(e) => setFilterType(e.target.value)}
-          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+          className="flex-1 px-3 py-2 rounded-lg border border-primary-accent/20 bg-card-bg text-text-primary text-sm focus:border-primary-accent"
         >
           <option value="all">All Types</option>
           <option value="passport">Passport</option>
@@ -203,12 +203,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
 
       {/* Documents List - Mobile Optimized */}
       {filteredAndSortedDocs.length === 0 ? (
-        <Card className="card-shadow">
+        <Card className="card-shadow bg-card-bg border-primary-accent/10 card-hover">
           <CardContent className="p-6 sm:p-8 text-center">
-            <Calendar className="h-12 sm:h-16 w-12 sm:w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-300 mb-2">No Documents Yet</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm sm:text-base">Start by adding your first document to track</p>
-            <Button onClick={onAddDocument} className="mobile-tap">
+            <Calendar className="h-12 sm:h-16 w-12 sm:w-16 text-primary-accent mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-text-primary mb-2">No Documents Yet</h3>
+            <p className="text-text-secondary mb-4 text-sm sm:text-base">Start by adding your first document to track</p>
+            <Button onClick={onAddDocument} className="mobile-tap btn-primary">
               <Plus className="h-4 w-4 mr-2" />
               Add Your First Document
             </Button>
@@ -221,17 +221,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
             const daysLeft = calculateDaysUntilExpiry(document.expiryDate);
             
             return (
-              <Card key={document.id} className="card-shadow mobile-tap">
+              <Card key={document.id} className="card-shadow mobile-tap bg-card-bg border-primary-accent/10 card-hover">
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start space-x-3 flex-1 min-w-0">
                       <div className="text-xl sm:text-2xl flex-shrink-0">{getDocumentIcon(document.type)}</div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-800 dark:text-white text-sm sm:text-base truncate">{document.name}</h3>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">{getDocumentTypeLabel(document.type)}</p>
-                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Expires: {formatExpiryDate(document.expiryDate)}</p>
+                        <h3 className="font-semibold text-text-primary text-sm sm:text-base truncate">{document.name}</h3>
+                        <p className="text-xs sm:text-sm text-text-secondary truncate">{getDocumentTypeLabel(document.type)}</p>
+                        <p className="text-xs sm:text-sm text-text-secondary truncate">Expires: {formatExpiryDate(document.expiryDate)}</p>
                         {document.notes && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 break-words">{document.notes}</p>
+                          <p className="text-xs text-text-secondary mt-1 line-clamp-2 break-words">{document.notes}</p>
                         )}
                       </div>
                     </div>
@@ -239,10 +239,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
                     <div className="flex flex-col items-end space-y-2 flex-shrink-0">
                       <Badge 
                         className={`text-xs whitespace-nowrap ${
-                          urgency === 'safe' ? 'bg-green-100 text-green-800 border-green-200' :
-                          urgency === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                          urgency === 'danger' ? 'bg-red-100 text-red-800 border-red-200' :
-                          'bg-red-200 text-red-900 border-red-300'
+                          urgency === 'safe' ? 'status-safe' :
+                          urgency === 'warning' ? 'status-warning' :
+                          urgency === 'danger' ? 'status-danger' :
+                          'status-expired'
                         }`}
                       >
                         {daysLeft < 0 ? 'Expired' : 
@@ -256,15 +256,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
                           size="sm"
                           variant="outline"
                           onClick={() => onEditDocument(document)}
-                          className="mobile-tap h-7 w-7 p-0"
+                          className="mobile-tap h-7 w-7 p-0 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent"
                         >
-                          <Edit className="h-3 w-3" />
+                          <Edit className="h-3 w-3 text-primary-accent" />
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleDeleteDocument(document.id)}
-                          className="mobile-tap text-red-600 hover:text-red-700 h-7 w-7 p-0"
+                          className="mobile-tap text-status-danger hover:text-status-danger bg-card-bg border-primary-accent/20 hover:bg-status-danger/10 h-7 w-7 p-0"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -274,16 +274,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
                               size="sm"
                               variant="outline"
                               onClick={() => handleSendUrgentAlert(document)}
-                              className="mobile-tap h-7 w-7 p-0"
+                              className="mobile-tap h-7 w-7 p-0 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent"
                             >
-                              <Bell className="h-3 w-3" />
+                              <Bell className="h-3 w-3 text-primary-accent" />
                             </Button>
                             {!document.isHandled && (
                               <Button
                                 size="sm"
                                 variant="secondary"
                                 onClick={() => handleMarkAsHandled(document.id)}
-                                className="mobile-tap text-xs px-2 h-7"
+                                className="mobile-tap text-xs px-2 h-7 btn-secondary"
                               >
                                 Handle
                               </Button>
