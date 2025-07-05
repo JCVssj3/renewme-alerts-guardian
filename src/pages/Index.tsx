@@ -49,7 +49,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-primary-bg p-4">
+    <div className="min-h-screen bg-primary-bg" style={{ paddingTop: 'max(env(safe-area-inset-top), 1.5rem)' }}>
       {currentView === 'dashboard' && (
         <Dashboard 
           onAddDocument={handleAddDocument}
@@ -59,15 +59,19 @@ const Index = () => {
       )}
       
       {(currentView === 'add-document' || currentView === 'edit-document') && (
-        <AddDocumentForm 
-          onBack={handleBack}
-          onSuccess={handleAddSuccess}
-          editingDocument={editingDocument}
-        />
+        <div className="p-2 sm:p-4">
+          <AddDocumentForm 
+            onBack={handleBack}
+            onSuccess={handleAddSuccess}
+            editingDocument={editingDocument}
+          />
+        </div>
       )}
       
       {currentView === 'settings' && (
-        <Settings onBack={handleBack} />
+        <div className="p-2 sm:p-4">
+          <Settings onBack={handleBack} />
+        </div>
       )}
     </div>
   );

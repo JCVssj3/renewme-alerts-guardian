@@ -65,21 +65,21 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 pt-12 flex items-center justify-center">
+    <div className="min-h-screen bg-primary-bg p-4 pt-6 sm:pt-8 flex items-center justify-center" style={{ paddingTop: 'max(env(safe-area-inset-top), 1.5rem)' }}>
       <div className="w-full max-w-md">
         <div className="flex items-center mb-6">
           <Button variant="outline" size="icon" onClick={onBack} className="mr-3">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Welcome to RenewMe</h1>
-            <p className="text-gray-600 dark:text-gray-300">Sign in to manage your renewals</p>
+            <h1 className="text-2xl font-bold text-text-primary">Welcome to RenewMe</h1>
+            <p className="text-text-secondary">Sign in to manage your renewals</p>
           </div>
         </div>
 
-        <Card className="card-shadow">
+        <Card className="card-shadow bg-card-bg">
           <CardHeader>
-            <CardTitle className="text-center">Authentication</CardTitle>
+            <CardTitle className="text-center text-text-primary">Authentication</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">

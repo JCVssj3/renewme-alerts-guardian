@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -97,7 +96,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-primary-bg p-2 sm:p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-primary-bg p-2 sm:p-4 pt-6 sm:pt-8 flex items-center justify-center">
         <div className="text-center">
           <div className="text-lg text-text-secondary">Loading your documents...</div>
         </div>
@@ -106,13 +105,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
   }
 
   return (
-    <div className="min-h-screen bg-primary-bg p-2 sm:p-4">
+    <div className="min-h-screen bg-primary-bg p-2 sm:p-4 pt-6 sm:pt-8">
       {/* Header - Mobile Optimized */}
       <div className="mb-4 sm:mb-6">
         <div className="flex items-start justify-between mb-3 sm:mb-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-text-primary truncate">RenewMe</h1>
-            <p className="text-sm sm:text-base text-text-secondary truncate">Never miss a renewal again</p>
+            <p className="text-sm sm:text-base text-text-primary font-semibold truncate">Never miss a renewal again</p>
           </div>
           <div className="flex gap-1 sm:gap-2 ml-2 flex-shrink-0">
             <Button 
