@@ -63,11 +63,20 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// RenewMe specific colors
-				safe: 'hsl(var(--safe))',
-				warning: 'hsl(var(--warning))',
-				danger: 'hsl(var(--danger))',
-				expired: 'hsl(var(--expired))'
+				// RenewMe custom color palette
+				'primary-bg': '#F5F5DC',      // Beige
+				'primary-accent': '#6EC1E4',   // Sky Blue
+				'text-primary': '#2C2C2C',     // Charcoal Gray
+				'text-secondary': '#7C7C7C',   // Warm Gray
+				'card-bg': '#FFFEF8',          // Ivory White
+				'button-hover': '#AEE2F8',     // Light Sky Blue
+				'status-success': '#6FCF97',   // Soft Green
+				'status-warning': '#F2C94C',   // Amber Yellow
+				'status-danger': '#EB5757',    // Soft Red
+				safe: '#6FCF97',
+				warning: '#F2C94C',
+				danger: '#EB5757',
+				expired: '#EB5757'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -108,13 +117,22 @@ export default {
 						transform: 'scale(2.33)',
 						opacity: '0'
 					}
+				},
+				'float': {
+					'0%, 100%': {
+						transform: 'translateY(0px)'
+					},
+					'50%': {
+						transform: 'translateY(-10px)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'slide-up': 'slide-up 0.3s ease-out',
-				'pulse-ring': 'pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite'
+				'pulse-ring': 'pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite',
+				'float': 'float 3s ease-in-out infinite'
 			}
 		}
 	},

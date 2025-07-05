@@ -49,7 +49,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pt-8">
+    <div className="min-h-screen gradient-bg pt-8">
       {currentView === 'dashboard' && (
         <Dashboard 
           onAddDocument={handleAddDocument}
