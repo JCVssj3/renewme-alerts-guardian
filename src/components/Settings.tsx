@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Bell, Moon, Sun, Monitor, LogOut, User } from 'lucide-react';
+import { ArrowLeft, Bell, LogOut, User } from 'lucide-react';
 import { AppSettings, ReminderPeriod } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { useAuth } from '@/hooks/useAuth';
@@ -35,10 +35,14 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
   const loadSettings = async () => {
     try {
+      console.log('Loading settings...');
       const userSettings = await SupabaseStorageService.getSettings();
+      console.log('Settings loaded:', userSettings);
       setSettings(userSettings);
     } catch (error) {
       console.error('Error loading settings:', error);
+      // Use default settings if loading fails
+      console.log('Using default settings due to error');
     } finally {
       setLoading(false);
     }
@@ -48,6 +52,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     try {
       setSaving(true);
       await SupabaseStorageService.saveSettings(settings);
+      console.log('Settings saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
     } finally {
@@ -63,12 +68,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         console.error('Error signing out:', error);
       }
     }
-  };
-
-  const handleThemeChange = (theme: 'light' | 'dark' | 'system') => {
-    const newSettings = { ...settings, theme };
-    setSettings(newSettings);
-    setTimeout(() => saveSettings(), 100);
   };
 
   const handleNotificationChange = (key: keyof typeof settings.notifications, value: boolean | ReminderPeriod) => {
@@ -130,48 +129,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
               <LogOut className="h-4 w-4" />
               Sign Out
             </Button>
-          </CardContent>
-        </Card>
-
-        {/* Theme Settings */}
-        <Card className="card-shadow bg-card-bg border-primary-accent/10">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-text-primary">
-              <Monitor className="h-5 w-5" />
-              Appearance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-text-primary">Theme</Label>
-                <Select value={settings.theme} onValueChange={handleThemeChange}>
-                  <SelectTrigger className="mt-2 bg-card-bg border-primary-accent/20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">
-                      <div className="flex items-center gap-2">
-                        <Sun className="h-4 w-4" />
-                        Light
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="dark">
-                      <div className="flex items-center gap-2">
-                        <Moon className="h-4 w-4" />
-                        Dark
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="system">
-                      <div className="flex items-center gap-2">
-                        <Monitor className="h-4 w-4" />
-                        System
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
