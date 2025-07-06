@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Bell, LogOut, User } from 'lucide-react';
+import { ArrowLeft, Bell, LogOut, User, RefreshCw, AlertCircle } from 'lucide-react';
 import { AppSettings, ReminderPeriod } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,19 +15,23 @@ interface SettingsProps {
   onBack: () => void;
 }
 
+const DEFAULT_SETTINGS: AppSettings = {
+  theme: 'system',
+  notifications: {
+    enabled: true,
+    sound: true,
+    vibration: true,
+    defaultReminderPeriod: '2_weeks'
+  }
+};
+
 const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   const { user, signOut } = useAuth();
-  const [settings, setSettings] = useState<AppSettings>({
-    theme: 'system',
-    notifications: {
-      enabled: true,
-      sound: true,
-      vibration: true,
-      defaultReminderPeriod: '2_weeks'
-    }
-  });
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     loadSettings();
@@ -35,17 +39,48 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
   const loadSettings = async () => {
     try {
+      setLoading(true);
+      setError(null);
       console.log('Loading settings...');
-      const userSettings = await SupabaseStorageService.getSettings();
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Settings loading timeout')), 5000)
+      );
+
+      const settingsPromise = SupabaseStorageService.getSettings();
+      
+      const userSettings = await Promise.race([settingsPromise, timeoutPromise]) as AppSettings;
       console.log('Settings loaded:', userSettings);
-      setSettings(userSettings);
+      
+      // Ensure we have valid settings structure
+      if (userSettings && typeof userSettings === 'object') {
+        setSettings({
+          theme: userSettings.theme || DEFAULT_SETTINGS.theme,
+          notifications: {
+            enabled: userSettings.notifications?.enabled ?? DEFAULT_SETTINGS.notifications.enabled,
+            sound: userSettings.notifications?.sound ?? DEFAULT_SETTINGS.notifications.sound,
+            vibration: userSettings.notifications?.vibration ?? DEFAULT_SETTINGS.notifications.vibration,
+            defaultReminderPeriod: userSettings.notifications?.defaultReminderPeriod || DEFAULT_SETTINGS.notifications.defaultReminderPeriod
+          }
+        });
+      } else {
+        console.log('Invalid settings format, using defaults');
+        setSettings(DEFAULT_SETTINGS);
+      }
     } catch (error) {
       console.error('Error loading settings:', error);
-      // Use default settings if loading fails
+      setError(error instanceof Error ? error.message : 'Failed to load settings');
+      setSettings(DEFAULT_SETTINGS);
       console.log('Using default settings due to error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    loadSettings();
   };
 
   const saveSettings = async () => {
@@ -55,6 +90,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       console.log('Settings saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
+      setError('Failed to save settings');
     } finally {
       setSaving(false);
     }
@@ -82,11 +118,47 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     setTimeout(() => saveSettings(), 100);
   };
 
-  if (loading) {
+  // Loading state with timeout
+  if (loading && retryCount === 0) {
     return (
       <ScreenContainer className="flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-accent mx-auto"></div>
           <div className="text-lg text-text-secondary">Loading settings...</div>
+          <Button 
+            variant="outline" 
+            onClick={handleRetry}
+            className="mt-4"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </ScreenContainer>
+    );
+  }
+
+  // Error state
+  if (error && loading) {
+    return (
+      <ScreenContainer className="flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md">
+          <AlertCircle className="h-12 w-12 text-status-danger mx-auto" />
+          <div className="text-lg text-text-primary">Couldn't load settings</div>
+          <div className="text-text-secondary">
+            {error.includes('timeout') 
+              ? 'Settings are taking too long to load. Please check your connection.' 
+              : 'There was a problem loading your settings. Using default values for now.'}
+          </div>
+          <div className="flex gap-2 justify-center">
+            <Button variant="outline" onClick={handleRetry}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+            <Button onClick={() => { setError(null); setLoading(false); }}>
+              Continue with Defaults
+            </Button>
+          </div>
         </div>
       </ScreenContainer>
     );
@@ -203,6 +275,15 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         </Card>
       </div>
 
+      {/* Error notification */}
+      {error && !loading && (
+        <div className="fixed bottom-4 right-4 bg-status-danger text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          {error}
+        </div>
+      )}
+
+      {/* Saving notification */}
       {saving && (
         <div className="fixed bottom-4 right-4 bg-primary-accent text-white px-4 py-2 rounded-lg shadow-lg">
           Saving settings...
