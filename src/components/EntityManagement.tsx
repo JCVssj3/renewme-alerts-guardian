@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,11 @@ import { Plus, Edit, Trash2, Users } from 'lucide-react';
 import { Entity } from '@/types';
 import { EntityService } from '@/services/entityService';
 
-const EntityManagement: React.FC = () => {
+interface EntityManagementProps {
+  onBack: () => void;
+}
+
+const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null);

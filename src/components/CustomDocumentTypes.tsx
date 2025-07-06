@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,11 @@ import { Plus, Trash2, FileText } from 'lucide-react';
 import { CustomDocumentType } from '@/types';
 import { CustomDocumentService } from '@/services/customDocumentService';
 
-const CustomDocumentTypes: React.FC = () => {
+interface CustomDocumentTypesProps {
+  onBack: () => void;
+}
+
+const CustomDocumentTypes: React.FC<CustomDocumentTypesProps> = ({ onBack }) => {
   const [customTypes, setCustomTypes] = useState<CustomDocumentType[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
