@@ -54,6 +54,11 @@ const Index = () => {
     setCurrentScreen('dashboard');
   };
 
+  const handleDocumentSuccess = () => {
+    setDocumentToEdit(undefined);
+    setCurrentScreen('dashboard');
+  };
+
   switch (currentScreen) {
     case 'auth':
       return (
@@ -67,7 +72,8 @@ const Index = () => {
       return (
         <AddDocumentForm
           onBack={handleBackToDashboard}
-          editDocument={documentToEdit}
+          onSuccess={handleDocumentSuccess}
+          editingDocument={documentToEdit}
         />
       );
     
