@@ -295,6 +295,7 @@ export class SupabaseStorageService {
     try {
       const userId = await this.getCurrentUserId();
       if (!userId) {
+        console.log('No user ID found, returning default settings');
         return {
           theme: 'system',
           notifications: {
@@ -306,27 +307,32 @@ export class SupabaseStorageService {
         };
       }
 
+      console.log('Fetching settings for user:', userId);
       const { data, error } = await supabase
         .from('user_settings')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching settings:', error);
+        throw error;
+      }
 
       if (!data) {
-        // Create default settings
+        console.log('No settings found, creating default settings');
         await this.createDefaultSettings(userId);
         return this.getSettings();
       }
 
+      console.log('Raw settings data:', data);
       return {
-        theme: data.theme as 'light' | 'dark' | 'system',
+        theme: (data.theme as 'light' | 'dark' | 'system') || 'system',
         notifications: {
-          enabled: data.notifications_enabled,
-          sound: data.notifications_sound,
-          vibration: data.notifications_vibration,
-          defaultReminderPeriod: data.default_reminder_period as ReminderPeriod
+          enabled: data.notifications_enabled ?? true,
+          sound: data.notifications_sound ?? true,
+          vibration: data.notifications_vibration ?? true,
+          defaultReminderPeriod: (data.default_reminder_period as ReminderPeriod) || '2_weeks'
         }
       };
     } catch (error) {
@@ -345,7 +351,8 @@ export class SupabaseStorageService {
 
   private static async createDefaultSettings(userId: string) {
     try {
-      await supabase
+      console.log('Creating default settings for user:', userId);
+      const { error } = await supabase
         .from('user_settings')
         .insert({
           user_id: userId,
@@ -355,6 +362,12 @@ export class SupabaseStorageService {
           notifications_vibration: true,
           default_reminder_period: '2_weeks'
         });
+      
+      if (error) {
+        console.error('Error creating default settings:', error);
+        throw error;
+      }
+      console.log('Default settings created successfully');
     } catch (error) {
       console.error('Error creating default settings:', error);
     }
@@ -365,6 +378,7 @@ export class SupabaseStorageService {
       const userId = await this.getCurrentUserId();
       if (!userId) throw new Error('User not authenticated');
 
+      console.log('Saving settings for user:', userId, settings);
       const { error } = await supabase
         .from('user_settings')
         .upsert({
@@ -376,7 +390,11 @@ export class SupabaseStorageService {
           default_reminder_period: settings.notifications.defaultReminderPeriod
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error saving settings:', error);
+        throw error;
+      }
+      console.log('Settings saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
       throw error;
