@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Bell, LogOut, User, RefreshCw, AlertCircle, Settings as SettingsIcon, Shield, Database } from 'lucide-react';
+import { ArrowLeft, Bell, LogOut, User, RefreshCw, AlertCircle, Shield, Database } from 'lucide-react';
 import { AppSettings, ReminderPeriod } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   const { user, signOut } = useAuth();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -40,9 +40,23 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     try {
       setLoading(true);
       setError(null);
+      
+      if (!user) {
+        console.log('No user found, using default settings');
+        setSettings(DEFAULT_SETTINGS);
+        return;
+      }
+
       console.log('Loading settings for user:', user?.email);
       
-      const userSettings = await SupabaseStorageService.getSettings();
+      // Set a timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Settings loading timeout')), 5000)
+      );
+      
+      const settingsPromise = SupabaseStorageService.getSettings();
+      
+      const userSettings = await Promise.race([settingsPromise, timeoutPromise]) as AppSettings;
       console.log('Settings loaded successfully:', userSettings);
       
       if (userSettings && typeof userSettings === 'object') {
@@ -62,7 +76,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     } catch (error) {
       console.error('Error loading settings:', error);
       setError('Failed to load settings');
-      setSettings(DEFAULT_SETTINGS);
+      setSettings(DEFAULT_SETTINGS); // Use defaults on error
     } finally {
       setLoading(false);
     }
@@ -75,6 +89,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       await SupabaseStorageService.saveSettings(newSettings);
       console.log('Settings saved successfully');
       setSettings(newSettings);
+      setError(null);
     } catch (error) {
       console.error('Error saving settings:', error);
       setError('Failed to save settings');
@@ -104,24 +119,9 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     saveSettings(newSettings);
   };
 
-  const handleThemeChange = (theme: 'light' | 'dark' | 'system') => {
-    const newSettings = {
-      ...settings,
-      theme
-    };
-    saveSettings(newSettings);
+  const retryLoadSettings = () => {
+    loadSettings();
   };
-
-  if (loading) {
-    return (
-      <ScreenContainer className="flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-accent mx-auto"></div>
-          <div className="text-lg text-text-secondary">Loading settings...</div>
-        </div>
-      </ScreenContainer>
-    );
-  }
 
   return (
     <ScreenContainer>
@@ -136,196 +136,187 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Account Section */}
-        <Card className="card-shadow bg-card-bg border-primary-accent/10">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-text-primary">
-              <User className="h-5 w-5" />
-              Account
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-text-primary font-medium">Signed in as</p>
-                <p className="text-text-secondary text-sm">{user?.email}</p>
-              </div>
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={handleSignOut}
-              className="w-full flex items-center gap-2 text-status-danger hover:text-status-danger border-status-danger/20 hover:bg-status-danger/10"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Appearance Section */}
-        <Card className="card-shadow bg-card-bg border-primary-accent/10">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-text-primary">
-              <SettingsIcon className="h-5 w-5" />
-              Appearance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="text-text-primary">Theme</Label>
-              <Select 
-                value={settings.theme} 
-                onValueChange={handleThemeChange}
-              >
-                <SelectTrigger className="mt-2 bg-card-bg border-primary-accent/20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">Light</SelectItem>
-                  <SelectItem value="dark">Dark</SelectItem>
-                  <SelectItem value="system">System</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Notification Settings */}
-        <Card className="card-shadow bg-card-bg border-primary-accent/10">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-text-primary">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="notifications-enabled" className="text-text-primary">
-                Enable Notifications
-              </Label>
-              <Switch
-                id="notifications-enabled"
-                checked={settings.notifications.enabled}
-                onCheckedChange={(checked) => handleNotificationChange('enabled', checked)}
-              />
-            </div>
-
-            {settings.notifications.enabled && (
-              <>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="notifications-sound" className="text-text-primary">
-                    Sound
-                  </Label>
-                  <Switch
-                    id="notifications-sound"
-                    checked={settings.notifications.sound}
-                    onCheckedChange={(checked) => handleNotificationChange('sound', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="notifications-vibration" className="text-text-primary">
-                    Vibration
-                  </Label>
-                  <Switch
-                    id="notifications-vibration"
-                    checked={settings.notifications.vibration}
-                    onCheckedChange={(checked) => handleNotificationChange('vibration', checked)}
-                  />
-                </div>
-
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-accent"></div>
+          <div className="text-lg text-text-secondary">Loading settings...</div>
+          <Button variant="outline" onClick={retryLoadSettings} className="mt-4">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Account Section */}
+          <Card className="card-shadow bg-card-bg border-primary-accent/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-text-primary">
+                <User className="h-5 w-5" />
+                Account
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-text-primary">Default Reminder Period</Label>
-                  <Select 
-                    value={settings.notifications.defaultReminderPeriod} 
-                    onValueChange={(value: ReminderPeriod) => handleNotificationChange('defaultReminderPeriod', value)}
-                  >
-                    <SelectTrigger className="mt-2 bg-card-bg border-primary-accent/20">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1_week">1 Week</SelectItem>
-                      <SelectItem value="2_weeks">2 Weeks</SelectItem>
-                      <SelectItem value="1_month">1 Month</SelectItem>
-                      <SelectItem value="2_months">2 Months</SelectItem>
-                      <SelectItem value="3_months">3 Months</SelectItem>
-                      <SelectItem value="6_months">6 Months</SelectItem>
-                      <SelectItem value="9_months">9 Months</SelectItem>
-                      <SelectItem value="12_months">12 Months</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <p className="text-text-primary font-medium">Signed in as</p>
+                  <p className="text-text-secondary text-sm">{user?.email}</p>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Data & Privacy Section */}
-        <Card className="card-shadow bg-card-bg border-primary-accent/10">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-text-primary">
-              <Shield className="h-5 w-5" />
-              Data & Privacy
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-text-primary font-medium">Data Storage</p>
-                <p className="text-text-secondary text-sm">Your data is securely stored and encrypted</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-text-primary font-medium">Backup Status</p>
-                <p className="text-text-secondary text-sm">All data automatically backed up</p>
-              </div>
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Database Connection Status */}
-        <Card className="card-shadow bg-card-bg border-primary-accent/10">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-text-primary">
-              <Database className="h-5 w-5" />
-              Database Connection
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-text-primary font-medium">Connection Status</p>
-                <p className="text-text-secondary text-sm">Connected to Supabase</p>
-              </div>
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-text-primary font-medium">Last Sync</p>
-                <p className="text-text-secondary text-sm">{new Date().toLocaleString()}</p>
               </div>
               <Button 
                 variant="outline" 
-                size="sm"
-                onClick={loadSettings}
-                disabled={loading}
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-2 text-status-danger hover:text-status-danger border-status-danger/20 hover:bg-status-danger/10"
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Sync
+                <LogOut className="h-4 w-4" />
+                Sign Out
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+
+          {/* Notification Settings */}
+          <Card className="card-shadow bg-card-bg border-primary-accent/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-text-primary">
+                <Bell className="h-5 w-5" />
+                Notifications
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="notifications-enabled" className="text-text-primary">
+                  Enable Notifications
+                </Label>
+                <Switch
+                  id="notifications-enabled"
+                  checked={settings.notifications.enabled}
+                  onCheckedChange={(checked) => handleNotificationChange('enabled', checked)}
+                />
+              </div>
+
+              {settings.notifications.enabled && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="notifications-sound" className="text-text-primary">
+                      Sound
+                    </Label>
+                    <Switch
+                      id="notifications-sound"
+                      checked={settings.notifications.sound}
+                      onCheckedChange={(checked) => handleNotificationChange('sound', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="notifications-vibration" className="text-text-primary">
+                      Vibration
+                    </Label>
+                    <Switch
+                      id="notifications-vibration"
+                      checked={settings.notifications.vibration}
+                      onCheckedChange={(checked) => handleNotificationChange('vibration', checked)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-text-primary">Default Reminder Period</Label>
+                    <Select 
+                      value={settings.notifications.defaultReminderPeriod} 
+                      onValueChange={(value: ReminderPeriod) => handleNotificationChange('defaultReminderPeriod', value)}
+                    >
+                      <SelectTrigger className="mt-2 bg-card-bg border-primary-accent/20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1_week">1 Week</SelectItem>
+                        <SelectItem value="2_weeks">2 Weeks</SelectItem>
+                        <SelectItem value="1_month">1 Month</SelectItem>
+                        <SelectItem value="2_months">2 Months</SelectItem>
+                        <SelectItem value="3_months">3 Months</SelectItem>
+                        <SelectItem value="6_months">6 Months</SelectItem>
+                        <SelectItem value="9_months">9 Months</SelectItem>
+                        <SelectItem value="12_months">12 Months</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Data & Privacy Section */}
+          <Card className="card-shadow bg-card-bg border-primary-accent/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-text-primary">
+                <Shield className="h-5 w-5" />
+                Data & Privacy
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-primary font-medium">Data Storage</p>
+                  <p className="text-text-secondary text-sm">Your data is securely stored and encrypted</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-primary font-medium">Backup Status</p>
+                  <p className="text-text-secondary text-sm">All data automatically backed up</p>
+                </div>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Database Connection Status */}
+          <Card className="card-shadow bg-card-bg border-primary-accent/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-text-primary">
+                <Database className="h-5 w-5" />
+                Database Connection
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-primary font-medium">Connection Status</p>
+                  <p className="text-text-secondary text-sm">Connected to Supabase</p>
+                </div>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-primary font-medium">Last Sync</p>
+                  <p className="text-text-secondary text-sm">{new Date().toLocaleString()}</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={loadSettings}
+                  disabled={loading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Sync
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Error notification */}
       {error && (
         <div className="fixed bottom-4 right-4 bg-status-danger text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
           <AlertCircle className="h-4 w-4" />
           {error}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={retryLoadSettings}
+            className="text-white hover:text-white ml-2"
+          >
+            Retry
+          </Button>
         </div>
       )}
 
