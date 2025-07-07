@@ -136,8 +136,8 @@ const Settings: React.FC<SettingsProps> = ({
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="entities">Entities</TabsTrigger>
-            <TabsTrigger value="document-types" className="text-xs">Document type</TabsTrigger>
-            <TabsTrigger value="data" className="text-xs font-bold">Data & Privacy</TabsTrigger>
+            <TabsTrigger value="document-types" className="text-xs font-semibold">Document type</TabsTrigger>
+            <TabsTrigger value="data" className="text-xs font-semibold">Data & Privacy</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="space-y-6">
