@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Document, AppSettings, Entity, CustomDocumentType, ReminderPeriod } from '@/types';
 
@@ -327,7 +326,7 @@ export class SupabaseStorageService {
 
       console.log('Raw settings data:', data);
       return {
-        theme: (data.theme as 'light' | 'dark' | 'system') || 'system',
+        theme: 'system',
         notifications: {
           enabled: data.notifications_enabled ?? true,
           sound: data.notifications_sound ?? true,
@@ -356,7 +355,6 @@ export class SupabaseStorageService {
         .from('user_settings')
         .insert({
           user_id: userId,
-          theme: 'system',
           notifications_enabled: true,
           notifications_sound: true,
           notifications_vibration: true,
@@ -383,7 +381,6 @@ export class SupabaseStorageService {
         .from('user_settings')
         .upsert({
           user_id: userId,
-          theme: settings.theme,
           notifications_enabled: settings.notifications.enabled,
           notifications_sound: settings.notifications.sound,
           notifications_vibration: settings.notifications.vibration,
