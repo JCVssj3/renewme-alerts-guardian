@@ -115,7 +115,7 @@ const Settings: React.FC<SettingsProps> = ({
   };
   return <ScreenContainer>
       {/* Header */}
-      <div className="flex items-center mb-6">
+      <div className="flex items-center mb-6 py-0 my-[35px]">
         <Button variant="outline" size="icon" onClick={onBack} className="mr-3">
           <ArrowLeft className="h-4 w-4" />
         </Button>

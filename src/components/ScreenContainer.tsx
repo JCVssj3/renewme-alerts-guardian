@@ -9,7 +9,7 @@ const ScreenContainer: React.FC<ScreenContainerProps> = ({
 }) => {
   return <div style={{
     paddingTop: 'max(env(safe-area-inset-top), 1.5rem)'
-  }} className="">
+  }} className="py-[5px]">
       {children}
     </div>;
 };
