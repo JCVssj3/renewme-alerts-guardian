@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,11 +12,9 @@ import { useAuth } from '@/hooks/useAuth';
 import ScreenContainer from './ScreenContainer';
 import EntityManagement from './EntityManagement';
 import CustomDocumentTypes from './CustomDocumentTypes';
-
 interface SettingsProps {
   onBack: () => void;
 }
-
 const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   notifications: {
@@ -27,41 +24,36 @@ const DEFAULT_SETTINGS: AppSettings = {
     defaultReminderPeriod: '2_weeks'
   }
 };
-
-const Settings: React.FC<SettingsProps> = ({ onBack }) => {
-  const { user, signOut } = useAuth();
+const Settings: React.FC<SettingsProps> = ({
+  onBack
+}) => {
+  const {
+    user,
+    signOut
+  } = useAuth();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
   useEffect(() => {
     loadSettings();
   }, []);
-
   const loadSettings = async () => {
     try {
       setLoading(true);
       setError(null);
-      
       if (!user) {
         console.log('No user found, using default settings');
         setSettings(DEFAULT_SETTINGS);
         return;
       }
-
       console.log('Loading settings for user:', user?.email);
-      
+
       // Set a timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Settings loading timeout')), 5000)
-      );
-      
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Settings loading timeout')), 5000));
       const settingsPromise = SupabaseStorageService.getSettings();
-      
-      const userSettings = await Promise.race([settingsPromise, timeoutPromise]) as AppSettings;
+      const userSettings = (await Promise.race([settingsPromise, timeoutPromise])) as AppSettings;
       console.log('Settings loaded successfully:', userSettings);
-      
       if (userSettings && typeof userSettings === 'object') {
         setSettings({
           theme: userSettings.theme || DEFAULT_SETTINGS.theme,
@@ -84,7 +76,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       setLoading(false);
     }
   };
-
   const saveSettings = async (newSettings: AppSettings) => {
     try {
       setSaving(true);
@@ -100,7 +91,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       setSaving(false);
     }
   };
-
   const handleSignOut = async () => {
     if (confirm('Are you sure you want to sign out?')) {
       try {
@@ -110,7 +100,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       }
     }
   };
-
   const handleNotificationChange = (key: keyof typeof settings.notifications, value: boolean | ReminderPeriod) => {
     const newSettings = {
       ...settings,
@@ -121,13 +110,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     };
     saveSettings(newSettings);
   };
-
   const retryLoadSettings = () => {
     loadSettings();
   };
-
-  return (
-    <ScreenContainer>
+  return <ScreenContainer>
       {/* Header */}
       <div className="flex items-center mb-6">
         <Button variant="outline" size="icon" onClick={onBack} className="mr-3">
@@ -139,22 +125,19 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+      {loading ? <div className="flex flex-col items-center justify-center py-12 space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-accent"></div>
           <div className="text-lg text-text-secondary">Loading settings...</div>
           <Button variant="outline" onClick={retryLoadSettings} className="mt-4">
             <RefreshCw className="h-4 w-4 mr-2" />
             Retry
           </Button>
-        </div>
-      ) : (
-        <Tabs defaultValue="general" className="space-y-6">
+        </div> : <Tabs defaultValue="general" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="entities">Entities</TabsTrigger>
-            <TabsTrigger value="document-types">Document Types</TabsTrigger>
-            <TabsTrigger value="data">Data & Privacy</TabsTrigger>
+            <TabsTrigger value="document-types" className="text-xs">Document type</TabsTrigger>
+            <TabsTrigger value="data" className="text-xs font-bold">Data & Privacy</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="space-y-6">
@@ -173,11 +156,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     <p className="text-text-secondary text-sm">{user?.email}</p>
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-2 text-status-danger hover:text-status-danger border-status-danger/20 hover:bg-status-danger/10"
-                >
+                <Button variant="outline" onClick={handleSignOut} className="w-full flex items-center gap-2 text-status-danger hover:text-status-danger border-status-danger/20 hover:bg-status-danger/10">
                   <LogOut className="h-4 w-4" />
                   Sign Out
                 </Button>
@@ -197,43 +176,27 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                   <Label htmlFor="notifications-enabled" className="text-text-primary">
                     Enable Notifications
                   </Label>
-                  <Switch
-                    id="notifications-enabled"
-                    checked={settings.notifications.enabled}
-                    onCheckedChange={(checked) => handleNotificationChange('enabled', checked)}
-                  />
+                  <Switch id="notifications-enabled" checked={settings.notifications.enabled} onCheckedChange={checked => handleNotificationChange('enabled', checked)} />
                 </div>
 
-                {settings.notifications.enabled && (
-                  <>
+                {settings.notifications.enabled && <>
                     <div className="flex items-center justify-between">
                       <Label htmlFor="notifications-sound" className="text-text-primary">
                         Sound
                       </Label>
-                      <Switch
-                        id="notifications-sound"
-                        checked={settings.notifications.sound}
-                        onCheckedChange={(checked) => handleNotificationChange('sound', checked)}
-                      />
+                      <Switch id="notifications-sound" checked={settings.notifications.sound} onCheckedChange={checked => handleNotificationChange('sound', checked)} />
                     </div>
 
                     <div className="flex items-center justify-between">
                       <Label htmlFor="notifications-vibration" className="text-text-primary">
                         Vibration
                       </Label>
-                      <Switch
-                        id="notifications-vibration"
-                        checked={settings.notifications.vibration}
-                        onCheckedChange={(checked) => handleNotificationChange('vibration', checked)}
-                      />
+                      <Switch id="notifications-vibration" checked={settings.notifications.vibration} onCheckedChange={checked => handleNotificationChange('vibration', checked)} />
                     </div>
 
                     <div>
                       <Label className="text-text-primary">Default Reminder Period</Label>
-                      <Select 
-                        value={settings.notifications.defaultReminderPeriod} 
-                        onValueChange={(value: ReminderPeriod) => handleNotificationChange('defaultReminderPeriod', value)}
-                      >
+                      <Select value={settings.notifications.defaultReminderPeriod} onValueChange={(value: ReminderPeriod) => handleNotificationChange('defaultReminderPeriod', value)}>
                         <SelectTrigger className="mt-2 bg-card-bg border-primary-accent/20">
                           <SelectValue />
                         </SelectTrigger>
@@ -249,8 +212,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                         </SelectContent>
                       </Select>
                     </div>
-                  </>
-                )}
+                  </>}
               </CardContent>
             </Card>
           </TabsContent>
@@ -310,12 +272,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     <p className="text-text-primary font-medium">Last Sync</p>
                     <p className="text-text-secondary text-sm">{new Date().toLocaleString()}</p>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={loadSettings}
-                    disabled={loading}
-                  >
+                  <Button variant="outline" size="sm" onClick={loadSettings} disabled={loading}>
                     <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                     Sync
                   </Button>
@@ -323,33 +280,21 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
-      )}
+        </Tabs>}
 
       {/* Error notification */}
-      {error && (
-        <div className="fixed bottom-4 right-4 bg-status-danger text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+      {error && <div className="fixed bottom-4 right-4 bg-status-danger text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
           <AlertCircle className="h-4 w-4" />
           {error}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={retryLoadSettings}
-            className="text-white hover:text-white ml-2"
-          >
+          <Button variant="ghost" size="sm" onClick={retryLoadSettings} className="text-white hover:text-white ml-2">
             Retry
           </Button>
-        </div>
-      )}
+        </div>}
 
       {/* Saving notification */}
-      {saving && (
-        <div className="fixed bottom-4 right-4 bg-primary-accent text-white px-4 py-2 rounded-lg shadow-lg">
+      {saving && <div className="fixed bottom-4 right-4 bg-primary-accent text-white px-4 py-2 rounded-lg shadow-lg">
           Saving settings...
-        </div>
-      )}
-    </ScreenContainer>
-  );
+        </div>}
+    </ScreenContainer>;
 };
-
 export default Settings;
