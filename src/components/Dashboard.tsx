@@ -101,7 +101,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>;
   }
-  return <div className="min-h-screen bg-primary-bg p-2 sm:p-4 pt-6 sm:pt-8 px-[8px] py-[50px]">
+  return <div className="min-h-screen bg-primary-bg p-2 sm:p-4 pt-6 sm:pt-8 px-[8px] py-[50px] my-[35px]">
       {/* Header - Mobile Optimized */}
       <div className="mb-4 sm:mb-6">
         <div className="flex items-start justify-between mb-3 sm:mb-4">
