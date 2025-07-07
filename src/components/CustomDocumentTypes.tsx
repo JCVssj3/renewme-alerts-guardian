@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, FileText } from 'lucide-react';
 import { CustomDocumentType } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
@@ -35,7 +34,9 @@ const CustomDocumentTypes: React.FC<CustomDocumentTypesProps> = ({ onBack }) => 
   const loadCustomTypes = async () => {
     try {
       setLoading(true);
+      console.log('Loading custom document types...');
       const types = await SupabaseStorageService.getCustomDocumentTypes();
+      console.log('Custom types loaded:', types);
       setCustomTypes(types);
     } catch (error) {
       console.error('Error loading custom document types:', error);
@@ -102,7 +103,7 @@ const CustomDocumentTypes: React.FC<CustomDocumentTypesProps> = ({ onBack }) => 
                 Add Type
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-white dark:bg-gray-800">
+            <DialogContent className="bg-white dark:bg-gray-800 max-w-md">
               <DialogHeader>
                 <DialogTitle>Add Custom Document Type</DialogTitle>
               </DialogHeader>
@@ -120,13 +121,13 @@ const CustomDocumentTypes: React.FC<CustomDocumentTypesProps> = ({ onBack }) => 
 
                 <div className="space-y-2">
                   <Label>Icon</Label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto">
                     {documentIcons.map((icon) => (
                       <Button
                         key={icon}
                         type="button"
                         variant={formData.icon === icon ? 'default' : 'outline'}
-                        className="w-12 h-12 p-0"
+                        className="w-full h-12 p-0 text-lg"
                         onClick={() => setFormData({ ...formData, icon })}
                       >
                         {icon}
@@ -135,7 +136,7 @@ const CustomDocumentTypes: React.FC<CustomDocumentTypesProps> = ({ onBack }) => 
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-4">
                   <Button type="submit" className="flex-1">
                     Add Type
                   </Button>
@@ -155,40 +156,29 @@ const CustomDocumentTypes: React.FC<CustomDocumentTypesProps> = ({ onBack }) => 
             <p>No custom document types created yet</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customTypes.map((type) => (
-                <TableRow key={type.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-lg">{type.icon}</span>
-                      <span className="font-medium">{type.name}</span>
+          <div className="space-y-3">
+            {customTypes.map((type) => (
+              <div key={type.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <span className="text-2xl flex-shrink-0">{type.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 dark:text-white truncate">{type.name}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Created {type.createdAt.toLocaleDateString()}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-500">
-                    {type.createdAt.toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(type.id)}
-                      className="mobile-tap text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDelete(type.id)}
+                  className="mobile-tap text-red-600 hover:text-red-700 p-2 flex-shrink-0"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>

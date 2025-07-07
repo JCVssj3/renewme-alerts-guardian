@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Edit, Trash2, Users } from 'lucide-react';
 import { Entity } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
@@ -41,7 +40,9 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
   const loadEntities = async () => {
     try {
       setLoading(true);
+      console.log('Loading entities...');
       const loadedEntities = await SupabaseStorageService.getEntities();
+      console.log('Entities loaded:', loadedEntities);
       setEntities(loadedEntities);
     } catch (error) {
       console.error('Error loading entities:', error);
@@ -133,7 +134,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
                 Add Entity
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-white dark:bg-gray-800">
+            <DialogContent className="bg-white dark:bg-gray-800 max-w-md">
               <DialogHeader>
                 <DialogTitle>
                   {editingEntity ? 'Edit Entity' : 'Add New Entity'}
@@ -163,13 +164,13 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
 
                 <div className="space-y-2">
                   <Label>Icon</Label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-5 gap-2">
                     {icons.map((icon) => (
                       <Button
                         key={icon}
                         type="button"
                         variant={formData.icon === icon ? 'default' : 'outline'}
-                        className="w-12 h-12 p-0"
+                        className="w-full h-10 p-0 text-lg"
                         onClick={() => setFormData({ ...formData, icon })}
                       >
                         {icon}
@@ -180,13 +181,13 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
 
                 <div className="space-y-2">
                   <Label>Color</Label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     {colors.map((color) => (
                       <button
                         key={color}
                         type="button"
-                        className={`w-8 h-8 rounded-full border-2 ${
-                          formData.color === color ? 'border-gray-400' : 'border-gray-200'
+                        className={`w-full h-10 rounded border-2 ${
+                          formData.color === color ? 'border-gray-400 ring-2 ring-gray-300' : 'border-gray-200'
                         }`}
                         style={{ backgroundColor: color }}
                         onClick={() => setFormData({ ...formData, color })}
@@ -195,7 +196,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-4">
                   <Button type="submit" className="flex-1">
                     {editingEntity ? 'Update' : 'Add'} Entity
                   </Button>
@@ -209,59 +210,53 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Entity</TableHead>
-              <TableHead>Tag/Role</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {entities.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>No entities created yet</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
             {entities.map((entity) => (
-              <TableRow key={entity.id}>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <div 
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm"
-                      style={{ backgroundColor: entity.color }}
-                    >
-                      {entity.icon}
-                    </div>
-                    <span className="font-medium">{entity.name}</span>
+              <div key={entity.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div className="flex items-center space-x-3">
+                  <div 
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg flex-shrink-0"
+                    style={{ backgroundColor: entity.color }}
+                  >
+                    {entity.icon}
                   </div>
-                </TableCell>
-                <TableCell>
-                  {entity.tag && (
-                    <Badge variant="secondary">{entity.tag}</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 dark:text-white truncate">{entity.name}</div>
+                    {entity.tag && (
+                      <Badge variant="secondary" className="mt-1 text-xs">{entity.tag}</Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEdit(entity)}
+                    className="mobile-tap p-2"
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                  {entity.id !== 'self' && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleEdit(entity)}
-                      className="mobile-tap"
+                      onClick={() => handleDelete(entity.id)}
+                      className="mobile-tap text-red-600 hover:text-red-700 p-2"
                     >
-                      <Edit className="h-3 w-3" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
-                    {entity.id !== 'self' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(entity.id)}
-                        className="mobile-tap text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
+                  )}
+                </div>
+              </div>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
