@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Edit, Trash2, Users } from 'lucide-react';
 import { Entity } from '@/types';
-import { EntityService } from '@/services/entityService';
+import { SupabaseStorageService } from '@/services/supabaseStorageService';
 
 interface EntityManagementProps {
   onBack: () => void;
@@ -18,6 +19,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     tag: '',
@@ -36,24 +38,37 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
     loadEntities();
   }, []);
 
-  const loadEntities = () => {
-    const loadedEntities = EntityService.getEntities();
-    setEntities(loadedEntities);
+  const loadEntities = async () => {
+    try {
+      setLoading(true);
+      const loadedEntities = await SupabaseStorageService.getEntities();
+      setEntities(loadedEntities);
+    } catch (error) {
+      console.error('Error loading entities:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name.trim()) return;
 
-    if (editingEntity) {
-      EntityService.updateEntity(editingEntity.id, formData);
-    } else {
-      EntityService.addEntity(formData);
+    try {
+      if (editingEntity) {
+        await SupabaseStorageService.updateEntity(editingEntity.id, formData);
+      } else {
+        await SupabaseStorageService.addEntity({
+          id: `entity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          ...formData
+        });
+      }
+      resetForm();
+      loadEntities();
+    } catch (error) {
+      console.error('Error saving entity:', error);
     }
-
-    resetForm();
-    loadEntities();
   };
 
   const handleEdit = (entity: Entity) => {
@@ -67,14 +82,18 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
     setIsAddDialogOpen(true);
   };
 
-  const handleDelete = (entityId: string) => {
+  const handleDelete = async (entityId: string) => {
     if (entityId === 'self') {
-      alert('Cannot delete the default "Self" entity');
+      alert('Cannot delete the default "Myself" entity');
       return;
     }
     if (confirm('Are you sure you want to delete this entity?')) {
-      EntityService.deleteEntity(entityId);
-      loadEntities();
+      try {
+        await SupabaseStorageService.deleteEntity(entityId);
+        loadEntities();
+      } catch (error) {
+        console.error('Error deleting entity:', error);
+      }
     }
   };
 
@@ -88,6 +107,16 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
     setEditingEntity(null);
     setIsAddDialogOpen(false);
   };
+
+  if (loading) {
+    return (
+      <Card className="card-shadow">
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-accent"></div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="card-shadow">

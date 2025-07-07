@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, FileText } from 'lucide-react';
 import { CustomDocumentType } from '@/types';
-import { CustomDocumentService } from '@/services/customDocumentService';
+import { SupabaseStorageService } from '@/services/supabaseStorageService';
 
 interface CustomDocumentTypesProps {
   onBack: () => void;
@@ -16,6 +17,7 @@ interface CustomDocumentTypesProps {
 const CustomDocumentTypes: React.FC<CustomDocumentTypesProps> = ({ onBack }) => {
   const [customTypes, setCustomTypes] = useState<CustomDocumentType[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     icon: '📄'
@@ -30,25 +32,40 @@ const CustomDocumentTypes: React.FC<CustomDocumentTypesProps> = ({ onBack }) => 
     loadCustomTypes();
   }, []);
 
-  const loadCustomTypes = () => {
-    const types = CustomDocumentService.getCustomDocumentTypes();
-    setCustomTypes(types);
+  const loadCustomTypes = async () => {
+    try {
+      setLoading(true);
+      const types = await SupabaseStorageService.getCustomDocumentTypes();
+      setCustomTypes(types);
+    } catch (error) {
+      console.error('Error loading custom document types:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name.trim()) return;
 
-    CustomDocumentService.addCustomDocumentType(formData);
-    resetForm();
-    loadCustomTypes();
+    try {
+      await SupabaseStorageService.addCustomDocumentType(formData);
+      resetForm();
+      loadCustomTypes();
+    } catch (error) {
+      console.error('Error adding custom document type:', error);
+    }
   };
 
-  const handleDelete = (typeId: string) => {
+  const handleDelete = async (typeId: string) => {
     if (confirm('Are you sure you want to delete this document type?')) {
-      CustomDocumentService.deleteCustomDocumentType(typeId);
-      loadCustomTypes();
+      try {
+        await SupabaseStorageService.deleteCustomDocumentType(typeId);
+        loadCustomTypes();
+      } catch (error) {
+        console.error('Error deleting custom document type:', error);
+      }
     }
   };
 
@@ -59,6 +76,16 @@ const CustomDocumentTypes: React.FC<CustomDocumentTypesProps> = ({ onBack }) => 
     });
     setIsAddDialogOpen(false);
   };
+
+  if (loading) {
+    return (
+      <Card className="card-shadow">
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-accent"></div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="card-shadow">
