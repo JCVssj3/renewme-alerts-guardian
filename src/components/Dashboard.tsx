@@ -8,26 +8,26 @@ import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { NotificationService } from '@/services/notificationService';
 import { calculateDaysUntilExpiry, getUrgencyStatus, formatExpiryDate } from '@/utils/dateUtils';
 import { getDocumentIcon, getDocumentTypeLabel } from '@/utils/documentIcons';
-
 interface DashboardProps {
   onAddDocument: () => void;
   onEditDocument: (document: Document) => void;
   onSettings: () => void;
 }
-
-const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, onSettings }) => {
+const Dashboard: React.FC<DashboardProps> = ({
+  onAddDocument,
+  onEditDocument,
+  onSettings
+}) => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('urgency');
   const [filterType, setFilterType] = useState<string>('all');
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     loadDocuments();
-    
+
     // Request notification permissions on load
     NotificationService.requestPermissions();
   }, []);
-
   const loadDocuments = async () => {
     try {
       setLoading(true);
@@ -39,7 +39,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
       setLoading(false);
     }
   };
-
   const sortDocuments = (docs: Document[]): Document[] => {
     return [...docs].sort((a, b) => {
       switch (sortBy) {
@@ -50,7 +49,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
         case 'name':
           return a.name.localeCompare(b.name);
         case 'urgency':
-          const urgencyOrder = { expired: 0, danger: 1, warning: 2, safe: 3 };
+          const urgencyOrder = {
+            expired: 0,
+            danger: 1,
+            warning: 2,
+            safe: 3
+          };
           const aUrgency = getUrgencyStatus(a.expiryDate);
           const bUrgency = getUrgencyStatus(b.expiryDate);
           return urgencyOrder[aUrgency] - urgencyOrder[bUrgency];
@@ -59,22 +63,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
       }
     });
   };
-
   const filterDocuments = (docs: Document[]): Document[] => {
     if (filterType === 'all') return docs;
     return docs.filter(doc => doc.type === filterType);
   };
-
   const handleMarkAsHandled = async (documentId: string) => {
     try {
-      await SupabaseStorageService.updateDocument(documentId, { isHandled: true });
+      await SupabaseStorageService.updateDocument(documentId, {
+        isHandled: true
+      });
       await NotificationService.cancelDocumentReminder(documentId);
       loadDocuments();
     } catch (error) {
       console.error('Error marking document as handled:', error);
     }
   };
-
   const handleDeleteDocument = async (documentId: string) => {
     if (confirm('Are you sure you want to delete this document?')) {
       try {
@@ -86,26 +89,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
       }
     }
   };
-
   const handleSendUrgentAlert = async (document: Document) => {
     await NotificationService.scheduleUrgentAlert(document);
   };
-
   const filteredAndSortedDocs = sortDocuments(filterDocuments(documents));
   const urgentDocs = documents.filter(doc => getUrgencyStatus(doc.expiryDate) === 'danger' || getUrgencyStatus(doc.expiryDate) === 'expired');
-
   if (loading) {
-    return (
-      <div className="min-h-screen bg-primary-bg p-2 sm:p-4 pt-6 sm:pt-8 flex items-center justify-center">
+    return <div className="min-h-screen bg-primary-bg p-2 sm:p-4 pt-6 sm:pt-8 flex items-center justify-center">
         <div className="text-center">
           <div className="text-lg text-text-secondary">Loading your documents...</div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-primary-bg p-2 sm:p-4 pt-6 sm:pt-8">
+  return <div className="min-h-screen bg-primary-bg p-2 sm:p-4 pt-6 sm:pt-8 px-[8px] py-[50px]">
       {/* Header - Mobile Optimized */}
       <div className="mb-4 sm:mb-6">
         <div className="flex items-start justify-between mb-3 sm:mb-4">
@@ -114,19 +110,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
             <p className="text-sm sm:text-base text-text-primary font-semibold truncate">Never miss a renewal again</p>
           </div>
           <div className="flex gap-1 sm:gap-2 ml-2 flex-shrink-0">
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={onSettings}
-              className="mobile-tap h-8 w-8 sm:h-10 sm:w-10 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent"
-            >
+            <Button variant="outline" size="icon" onClick={onSettings} className="mobile-tap h-8 w-8 sm:h-10 sm:w-10 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent">
               <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary-accent" />
             </Button>
-            <Button 
-              onClick={onAddDocument}
-              className="mobile-tap btn-primary h-8 sm:h-10 px-2 sm:px-4"
-              size="sm"
-            >
+            <Button onClick={onAddDocument} className="mobile-tap btn-primary h-8 sm:h-10 px-2 sm:px-4" size="sm">
               <Plus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
               <span className="hidden sm:inline">Add Document</span>
               <span className="sm:hidden">Add</span>
@@ -172,22 +159,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
 
       {/* Sort and Filter Controls - Mobile Optimized */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <select 
-          value={sortBy} 
-          onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="flex-1 px-3 py-2 rounded-lg border border-primary-accent/20 bg-card-bg text-text-primary text-sm focus:border-primary-accent"
-        >
+        <select value={sortBy} onChange={e => setSortBy(e.target.value as SortOption)} className="flex-1 px-3 py-2 rounded-lg border border-primary-accent/20 bg-card-bg text-text-primary text-sm focus:border-primary-accent">
           <option value="urgency">Sort by Urgency</option>
           <option value="expiry_date">Sort by Expiry Date</option>
           <option value="document_type">Sort by Type</option>
           <option value="name">Sort by Name</option>
         </select>
 
-        <select 
-          value={filterType} 
-          onChange={(e) => setFilterType(e.target.value)}
-          className="flex-1 px-3 py-2 rounded-lg border border-primary-accent/20 bg-card-bg text-text-primary text-sm focus:border-primary-accent"
-        >
+        <select value={filterType} onChange={e => setFilterType(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-primary-accent/20 bg-card-bg text-text-primary text-sm focus:border-primary-accent">
           <option value="all">All Types</option>
           <option value="passport">Passport</option>
           <option value="drivers_license">Driver's License</option>
@@ -201,8 +180,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
       </div>
 
       {/* Documents List - Mobile Optimized */}
-      {filteredAndSortedDocs.length === 0 ? (
-        <Card className="card-shadow bg-card-bg border-primary-accent/10 card-hover">
+      {filteredAndSortedDocs.length === 0 ? <Card className="card-shadow bg-card-bg border-primary-accent/10 card-hover">
           <CardContent className="p-6 sm:p-8 text-center">
             <Calendar className="h-12 sm:h-16 w-12 sm:w-16 text-primary-accent mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-text-primary mb-2">No Documents Yet</h3>
@@ -212,15 +190,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
               Add Your First Document
             </Button>
           </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3 sm:space-y-4">
-          {filteredAndSortedDocs.map((document) => {
-            const urgency = getUrgencyStatus(document.expiryDate);
-            const daysLeft = calculateDaysUntilExpiry(document.expiryDate);
-            
-            return (
-              <Card key={document.id} className="card-shadow mobile-tap bg-card-bg border-primary-accent/10 card-hover">
+        </Card> : <div className="space-y-3 sm:space-y-4">
+          {filteredAndSortedDocs.map(document => {
+        const urgency = getUrgencyStatus(document.expiryDate);
+        const daysLeft = calculateDaysUntilExpiry(document.expiryDate);
+        return <Card key={document.id} className="card-shadow mobile-tap bg-card-bg border-primary-accent/10 card-hover">
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start space-x-3 flex-1 min-w-0">
@@ -229,77 +203,37 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
                         <h3 className="font-semibold text-text-primary text-sm sm:text-base truncate">{document.name}</h3>
                         <p className="text-xs sm:text-sm text-text-secondary truncate">{getDocumentTypeLabel(document.type)}</p>
                         <p className="text-xs sm:text-sm text-text-secondary truncate">Expires: {formatExpiryDate(document.expiryDate)}</p>
-                        {document.notes && (
-                          <p className="text-xs text-text-secondary mt-1 line-clamp-2 break-words">{document.notes}</p>
-                        )}
+                        {document.notes && <p className="text-xs text-text-secondary mt-1 line-clamp-2 break-words">{document.notes}</p>}
                       </div>
                     </div>
                     
                     <div className="flex flex-col items-end space-y-2 flex-shrink-0">
-                      <Badge 
-                        className={`text-xs whitespace-nowrap ${
-                          urgency === 'safe' ? 'status-safe' :
-                          urgency === 'warning' ? 'status-warning' :
-                          urgency === 'danger' ? 'status-danger' :
-                          'status-expired'
-                        }`}
-                      >
-                        {daysLeft < 0 ? 'Expired' : 
-                         daysLeft === 0 ? 'Today' :
-                         daysLeft === 1 ? '1 Day' :
-                         `${daysLeft} Days`}
+                      <Badge className={`text-xs whitespace-nowrap ${urgency === 'safe' ? 'status-safe' : urgency === 'warning' ? 'status-warning' : urgency === 'danger' ? 'status-danger' : 'status-expired'}`}>
+                        {daysLeft < 0 ? 'Expired' : daysLeft === 0 ? 'Today' : daysLeft === 1 ? '1 Day' : `${daysLeft} Days`}
                       </Badge>
                       
                       <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onEditDocument(document)}
-                          className="mobile-tap h-7 w-7 p-0 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent"
-                        >
+                        <Button size="sm" variant="outline" onClick={() => onEditDocument(document)} className="mobile-tap h-7 w-7 p-0 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent">
                           <Edit className="h-3 w-3 text-primary-accent" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDeleteDocument(document.id)}
-                          className="mobile-tap text-status-danger hover:text-status-danger bg-card-bg border-primary-accent/20 hover:bg-status-danger/10 h-7 w-7 p-0"
-                        >
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteDocument(document.id)} className="mobile-tap text-status-danger hover:text-status-danger bg-card-bg border-primary-accent/20 hover:bg-status-danger/10 h-7 w-7 p-0">
                           <Trash2 className="h-3 w-3" />
                         </Button>
-                        {urgency === 'danger' || urgency === 'expired' ? (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleSendUrgentAlert(document)}
-                              className="mobile-tap h-7 w-7 p-0 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent"
-                            >
+                        {urgency === 'danger' || urgency === 'expired' ? <>
+                            <Button size="sm" variant="outline" onClick={() => handleSendUrgentAlert(document)} className="mobile-tap h-7 w-7 p-0 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent">
                               <Bell className="h-3 w-3 text-primary-accent" />
                             </Button>
-                            {!document.isHandled && (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => handleMarkAsHandled(document.id)}
-                                className="mobile-tap text-xs px-2 h-7 btn-secondary"
-                              >
+                            {!document.isHandled && <Button size="sm" variant="secondary" onClick={() => handleMarkAsHandled(document.id)} className="mobile-tap text-xs px-2 h-7 btn-secondary">
                                 Handle
-                              </Button>
-                            )}
-                          </>
-                        ) : null}
+                              </Button>}
+                          </> : null}
                       </div>
                     </div>
                   </div>
                 </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+              </Card>;
+      })}
+        </div>}
+    </div>;
 };
-
 export default Dashboard;
