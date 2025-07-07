@@ -15,8 +15,10 @@ const config: CapacitorConfig = {
     },
     LocalNotifications: {
       smallIcon: "ic_stat_icon_config_sample",
-      iconColor: "#488AFF",
-      sound: "beep.wav"
+      iconColor: "#3B82F6",
+      sound: "beep.wav",
+      requestPermissions: true,
+      scheduleOn: "exact"
     },
     Camera: {
       ios: {
@@ -25,6 +27,22 @@ const config: CapacitorConfig = {
       android: {
         requestPermissions: true
       }
+    },
+    App: {
+      appendUserAgent: "RenewMe/1.0"
+    },
+    SplashScreen: {
+      launchShowDuration: 3000,
+      launchAutoHide: true,
+      androidSplashResourceName: "splash",
+      androidScaleType: "CENTER_CROP",
+      showSpinner: false,
+      androidSpinnerStyle: "large",
+      iosSpinnerStyle: "small",
+      spinnerColor: "#3B82F6",
+      splashFullScreen: true,
+      splashImmersive: true,
+      backgroundColor: "#ffffff"
     }
   }
 };

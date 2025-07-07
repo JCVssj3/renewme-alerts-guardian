@@ -5,8 +5,14 @@ import { calculateDaysUntilExpiry, getReminderDate } from '@/utils/dateUtils';
 
 export class NotificationService {
   static async requestPermissions() {
-    const result = await LocalNotifications.requestPermissions();
-    return result.display === 'granted';
+    try {
+      const result = await LocalNotifications.requestPermissions();
+      console.log('Notification permissions result:', result);
+      return result.display === 'granted';
+    } catch (error) {
+      console.error('Error requesting notification permissions:', error);
+      return false;
+    }
   }
 
   static async scheduleDocumentReminder(document: Document) {
