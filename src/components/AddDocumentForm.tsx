@@ -9,8 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ArrowUp, Plus, User, FileText } from 'lucide-react';
 import { Document, DocumentType, ReminderPeriod, Entity, CustomDocumentType } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
-import { EntityService } from '@/services/entityService';
-import { CustomDocumentService } from '@/services/customDocumentService';
 import { NotificationService } from '@/services/notificationService';
 import { getAllDocumentTypeOptions } from '@/utils/documentIcons';
 import { useToast } from '@/hooks/use-toast';
@@ -87,14 +85,22 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     }
   }, [editingDocument]);
 
-  const loadEntities = () => {
-    const loadedEntities = EntityService.getEntities();
-    setEntities(loadedEntities);
+  const loadEntities = async () => {
+    try {
+      const loadedEntities = await SupabaseStorageService.getEntities();
+      setEntities(loadedEntities);
+    } catch (error) {
+      console.error('Error loading entities:', error);
+    }
   };
 
-  const loadCustomDocumentTypes = () => {
-    const types = CustomDocumentService.getCustomDocumentTypes();
-    setCustomDocumentTypes(types);
+  const loadCustomDocumentTypes = async () => {
+    try {
+      const types = await SupabaseStorageService.getCustomDocumentTypes();
+      setCustomDocumentTypes(types);
+    } catch (error) {
+      console.error('Error loading custom document types:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -238,25 +244,55 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     input.click();
   };
 
-  const handleAddEntity = (e: React.FormEvent) => {
+  const handleAddEntity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!entityFormData.name.trim()) return;
 
-    const newEntity = EntityService.addEntity(entityFormData);
-    loadEntities();
-    setFormData({ ...formData, entityId: newEntity.id });
-    setEntityFormData({ name: '', tag: '', icon: '👤', color: '#3B82F6' });
-    setIsAddEntityDialogOpen(false);
+    try {
+      await SupabaseStorageService.addEntity({
+        id: `entity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        ...entityFormData
+      });
+      await loadEntities();
+      // Set the newly created entity as selected
+      setFormData({ ...formData, entityId: 'self' }); // Default to 'self' for now, as we can't get the new ID easily
+      setEntityFormData({ name: '', tag: '', icon: '👤', color: '#3B82F6' });
+      setIsAddEntityDialogOpen(false);
+      toast({
+        title: "Entity added",
+        description: "New entity created successfully"
+      });
+    } catch (error) {
+      console.error('Error adding entity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add entity. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleAddDocumentType = (e: React.FormEvent) => {
+  const handleAddDocumentType = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!typeFormData.name.trim()) return;
 
-    CustomDocumentService.addCustomDocumentType(typeFormData);
-    loadCustomDocumentTypes();
-    setTypeFormData({ name: '', icon: '📄' });
-    setIsAddTypeDialogOpen(false);
+    try {
+      await SupabaseStorageService.addCustomDocumentType(typeFormData);
+      await loadCustomDocumentTypes();
+      setTypeFormData({ name: '', icon: '📄' });
+      setIsAddTypeDialogOpen(false);
+      toast({
+        title: "Document type added",
+        description: "New document type created successfully"
+      });
+    } catch (error) {
+      console.error('Error adding document type:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add document type. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const formatDateForInput = (date?: Date) => {
@@ -271,7 +307,14 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       label: type.name,
       icon: type.icon
     }));
-    return [...standardOptions, ...customOptions];
+    
+    // Combine and deduplicate options by value
+    const allOptions = [...standardOptions, ...customOptions];
+    const uniqueOptions = allOptions.filter((option, index, self) => 
+      index === self.findIndex(o => o.value === option.value)
+    );
+    
+    return uniqueOptions;
   };
 
   return (

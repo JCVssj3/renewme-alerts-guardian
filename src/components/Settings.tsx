@@ -70,7 +70,7 @@ const Settings: React.FC<SettingsProps> = ({
       }
     } catch (error) {
       console.error('Error loading settings:', error);
-      setError('Failed to load settings');
+      // Remove the toast notification for settings loading error
       setSettings(DEFAULT_SETTINGS); // Use defaults on error
     } finally {
       setLoading(false);
