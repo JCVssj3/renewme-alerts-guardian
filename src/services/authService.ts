@@ -50,12 +50,13 @@ export class AuthService {
         await supabase.rpc('update_last_login', { user_id: authData.user.id });
       }
 
-      // Handle "Remember Me" functionality
+      // Handle "Remember Me" functionality - persist session until explicitly signed out
       if (data.rememberMe) {
         localStorage.setItem('rememberMe', 'true');
+        // Supabase automatically handles persistent sessions - no expiry needed
+        // Session will persist until explicitly signed out
       } else {
         localStorage.removeItem('rememberMe');
-        // Set session to expire when browser closes (default behavior)
       }
 
       return { success: true, user: authData.user, session: authData.session };

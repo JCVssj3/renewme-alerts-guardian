@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Bell, Settings, Calendar, Edit, Trash2 } from 'lucide-react';
+import { Plus, Bell, Settings, Calendar, Edit, Trash2, Image } from 'lucide-react';
+import ImageViewer from '@/components/ImageViewer';
 import { Document, SortOption } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { NotificationService } from '@/services/notificationService';
@@ -22,6 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [sortBy, setSortBy] = useState<SortOption>('urgency');
   const [filterType, setFilterType] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   useEffect(() => {
     loadDocuments();
 
@@ -91,6 +93,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
   const handleSendUrgentAlert = async (document: Document) => {
     await NotificationService.scheduleUrgentAlert(document);
+  };
+
+  const handleViewImage = (imageUrl: string, documentName: string) => {
+    setSelectedImage({ url: imageUrl, name: documentName });
   };
   const filteredAndSortedDocs = sortDocuments(filterDocuments(documents));
   const urgentDocs = documents.filter(doc => getUrgencyStatus(doc.expiryDate) === 'danger' || getUrgencyStatus(doc.expiryDate) === 'expired');
@@ -213,6 +219,16 @@ const Dashboard: React.FC<DashboardProps> = ({
                       </Badge>
                       
                       <div className="flex gap-1">
+                        {document.imageUrl && (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleViewImage(document.imageUrl!, document.name)} 
+                            className="mobile-tap h-7 w-7 p-0 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent"
+                          >
+                            <Image className="h-3 w-3 text-primary-accent" />
+                          </Button>
+                        )}
                         <Button size="sm" variant="outline" onClick={() => onEditDocument(document)} className="mobile-tap h-7 w-7 p-0 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent">
                           <Edit className="h-3 w-3 text-primary-accent" />
                         </Button>
@@ -234,6 +250,16 @@ const Dashboard: React.FC<DashboardProps> = ({
               </Card>;
       })}
         </div>}
+
+      {/* Image Viewer Modal */}
+      {selectedImage && (
+        <ImageViewer
+          isOpen={true}
+          onClose={() => setSelectedImage(null)}
+          imageUrl={selectedImage.url}
+          documentName={selectedImage.name}
+        />
+      )}
     </div>;
 };
 export default Dashboard;

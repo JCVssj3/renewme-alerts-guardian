@@ -94,7 +94,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, onError, onSwitchToS
               onCheckedChange={handleRememberMeChange}
             />
             <Label htmlFor="remember-me" className="text-sm text-text-secondary cursor-pointer">
-              Remember me for 30 days
+              Keep me signed in
             </Label>
           </div>
           

@@ -13,6 +13,7 @@ import { EntityService } from '@/services/entityService';
 import { CustomDocumentService } from '@/services/customDocumentService';
 import { NotificationService } from '@/services/notificationService';
 import { getAllDocumentTypeOptions } from '@/utils/documentIcons';
+import { useToast } from '@/hooks/use-toast';
 
 interface AddDocumentFormProps {
   onBack: () => void;
@@ -21,6 +22,7 @@ interface AddDocumentFormProps {
 }
 
 const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, editingDocument }) => {
+  const { toast } = useToast();
   const [entities, setEntities] = useState<Entity[]>([]);
   const [customDocumentTypes, setCustomDocumentTypes] = useState<CustomDocumentType[]>([]);
   const [formData, setFormData] = useState({
@@ -35,6 +37,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   // Add Entity Dialog State
   const [isAddEntityDialogOpen, setIsAddEntityDialogOpen] = useState(false);
@@ -111,12 +114,27 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       
       // Upload image if selected
       if (imageFile) {
+        setIsUploading(true);
         console.log('Uploading image file:', imageFile.name);
         const uploadedUrl = await SupabaseStorageService.uploadDocumentImage(imageFile);
         if (uploadedUrl) {
           imageUrl = uploadedUrl;
           console.log('Image uploaded successfully:', uploadedUrl);
+          toast({
+            title: "Image uploaded",
+            description: "Document image uploaded successfully"
+          });
+        } else {
+          toast({
+            title: "Upload failed",
+            description: "Failed to upload image. Please try again.",
+            variant: "destructive"
+          });
+          setIsUploading(false);
+          setIsSubmitting(false);
+          return;
         }
+        setIsUploading(false);
       }
 
       if (editingDocument) {
@@ -164,12 +182,21 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       }
       
       console.log('Document saved successfully');
+      toast({
+        title: editingDocument ? "Document updated" : "Document saved",
+        description: editingDocument ? "Document updated successfully" : "New document added successfully"
+      });
       onSuccess();
     } catch (error) {
       console.error('Error saving document:', error);
-      alert('Failed to save document. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to save document. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
+      setIsUploading(false);
     }
   };
 
@@ -177,10 +204,34 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast({
+            title: "File too large",
+            description: "Please select an image smaller than 5MB",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast({
+            title: "Invalid file type",
+            description: "Please select an image file",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         setImageFile(file);
+        toast({
+          title: "Image selected",
+          description: `${file.name} ready to upload`
+        });
         console.log('Manual file upload successful:', file.name);
       }
     };
@@ -524,9 +575,9 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
             <Button 
               type="submit" 
               className="w-full mobile-tap bg-primary hover:bg-primary/90"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploading}
             >
-              {isSubmitting ? 'Saving...' : editingDocument ? 'Update Document' : 'Save Document'}
+              {isUploading ? 'Uploading Image...' : isSubmitting ? 'Saving...' : editingDocument ? 'Update Document' : 'Save Document'}
             </Button>
           </form>
         </CardContent>
