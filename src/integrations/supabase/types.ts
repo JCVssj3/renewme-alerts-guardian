@@ -173,11 +173,60 @@ export type Database = {
         }
         Relationships: []
       }
+      user_tokens: {
+        Row: {
+          created_at: string | null
+          device_type: string | null
+          id: string
+          is_active: boolean | null
+          token: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_type?: string | null
+          id: string
+          is_active?: boolean | null
+          token?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          token?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      documents_needing_reminders: {
+        Row: {
+          expiry_date: string | null
+          full_name: string | null
+          id: string | null
+          name: string | null
+          reminder_period: string | null
+          type: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      calculate_reminder_date: {
+        Args: { expiry_date: string; reminder_period: string }
+        Returns: string
+      }
+      cleanup_old_tokens: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       update_last_login: {
         Args: { user_id: string }
         Returns: undefined
