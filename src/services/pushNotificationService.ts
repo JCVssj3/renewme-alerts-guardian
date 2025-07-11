@@ -1,27 +1,26 @@
+// src/services/pushNotificationService.ts
 import { PushNotifications } from '@capacitor/push-notifications';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { supabase }         from '@/integrations/supabase/client';
+import { toast }            from '@/hooks/use-toast';
 
 export class PushNotificationService {
   private static async getCurrentUser() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error('Error fetching current user:', error);
+    }
     return user;
   }
 
-  static async initializePushNotifications() {
+  static async initializePushNotifications(): Promise<boolean> {
     try {
-      // Request permission to use push notifications
-      const result = await PushNotifications.requestPermissions();
-      
-      if (result.receive === 'granted') {
-        // Register with Apple / Google to receive push via APNS/FCM
-        await PushNotifications.register();
-        console.log('Push notifications registered successfully');
-      } else {
-        console.log('Push notification permissions denied');
+      const { receive } = await PushNotifications.requestPermissions();
+      if (receive !== 'granted') {
+        console.warn('Push notification permissions denied');
         return false;
       }
-
+      await PushNotifications.register();
+      console.log('Push notifications registered successfully');
       return true;
     } catch (error) {
       console.error('Error initializing push notifications:', error);
@@ -29,7 +28,7 @@ export class PushNotificationService {
     }
   }
 
-  static async saveFCMToken(token: string) {
+  static async saveFCMToken(token: string): Promise<boolean> {
     try {
       const user = await this.getCurrentUser();
       if (!user) {
@@ -37,19 +36,19 @@ export class PushNotificationService {
         return false;
       }
 
-      // Save or update the FCM token in Supabase
       const { error } = await supabase
         .from('user_tokens')
-        .upsert({
-          id: `${user.id}_fcm`,
-          user_id: user.id,
-          token: token,
-          device_type: 'android', // You might want to detect this
-          is_active: true,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'id'
-        });
+        .upsert(
+          {
+            id:           `${user.id}_fcm`,
+            user_id:      user.id,
+            token,
+            device_type:  'android',
+            is_active:    true,
+            updated_at:   new Date().toISOString(),
+          },
+          { onConflict: ['id'] }             // ensure we only conflict on our synthetic PK
+        );
 
       if (error) {
         console.error('Error saving FCM token:', error);
@@ -58,71 +57,68 @@ export class PushNotificationService {
 
       console.log('FCM token saved successfully');
       return true;
-    } catch (error) {
-      console.error('Error in saveFCMToken:', error);
+    } catch (err) {
+      console.error('Error in saveFCMToken:', err);
       return false;
     }
   }
 
-  static async setupPushListeners() {
-    // Called when registration is successful
-    PushNotifications.addListener('registration', async (token) => {
-      console.log('Push registration success, token: ', token.value);
-      await this.saveFCMToken(token.value);
+  static async setupPushListeners(): Promise<void> {
+    // 1) Registration successful
+    PushNotifications.addListener('registration', async ({ value: token }) => {
+      console.log('Push registration success, token:', token);
+      await this.saveFCMToken(token);
     });
 
-    // Called when registration encounters an error
-    PushNotifications.addListener('registrationError', (error) => {
-      console.error('Push registration error: ', error.error);
+    // 2) Registration error
+    PushNotifications.addListener('registrationError', ({ error }) => {
+      console.error('Push registration error:', error);
       toast({
-        title: "Push Notification Error",
-        description: "Failed to register for push notifications",
-        variant: "destructive",
+        title:       'Push Registration Failed',
+        description: 'Could not register for push notifications.',
+        variant:     'destructive',
       });
     });
 
-    // Called when the device receives a push notification
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('Push notification received: ', notification);
-      
-      // Show a toast for foreground notifications
+    // 3) Received while app in foreground
+    PushNotifications.addListener('pushNotificationReceived', ({ title, body }) => {
+      console.log('Push notification received:', { title, body });
       toast({
-        title: notification.title || "Document Reminder",
-        description: notification.body || "You have a document renewal reminder",
+        title:       title    || 'Document Reminder',
+        description: body     || 'You have a document renewal reminder.',
       });
     });
 
-    // Called when a user taps on a push notification
-    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-      console.log('Push notification action performed: ', notification);
-      
-      // You can navigate to specific document or show document details here
-      const data = notification.notification.data;
-      if (data?.documentId) {
-        console.log('User tapped notification for document:', data.documentId);
+    // 4) User tapped the notification
+    PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
+      console.log('Push action performed:', notification);
+      const docId = notification.data?.documentId;
+      if (docId) {
+        // TODO: navigate to document detail screen
+        console.log('Navigate to document:', docId);
       }
     });
   }
 
-  static async refreshToken() {
+  static async refreshToken(): Promise<void> {
     try {
       const user = await this.getCurrentUser();
       if (!user) return;
 
-      // Mark current token as inactive
+      // deactivate old tokens
       await supabase
         .from('user_tokens')
         .update({ is_active: false })
         .eq('user_id', user.id);
 
-      // Re-register to get a new token
+      // re-register to get and save a new token
       await PushNotifications.register();
     } catch (error) {
       console.error('Error refreshing token:', error);
     }
   }
 
-  static async clearUserTokens() {
+  static async clearUserTokens(): Promise<void> {
     try {
       const user = await this.getCurrentUser();
       if (!user) return;
@@ -132,7 +128,7 @@ export class PushNotificationService {
         .update({ is_active: false })
         .eq('user_id', user.id);
 
-      console.log('User tokens cleared');
+      console.log('All tokens for user marked inactive');
     } catch (error) {
       console.error('Error clearing user tokens:', error);
     }
