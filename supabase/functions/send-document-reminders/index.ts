@@ -1,237 +1,141 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve }                         from 'https://deno.land/std@0.168.0/http/server.ts';
+import admin                            from 'npm:firebase-admin';
+import { createClient }                 from 'npm:@supabase/supabase-js';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+// ** CORS headers **
+const CORS = {
+  'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
-interface Document {
-  id: string;
-  name: string;
-  type: string;
-  expiry_date: string;
-  reminder_period: string;
-  user_id: string;
-  full_name: string;
-}
+// ---- ENV VARS ----
+const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_KEY     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const FIREBASE_KEY     = Deno.env.get('FIREBASE_SERVER_KEY')!;
 
-interface UserToken {
-  user_id: string;
-  token: string;
-  device_type: string;
-  is_active: boolean;
-}
+// ---- INIT Firebase Admin ----
+const serviceAccount   = JSON.parse(Deno.readTextFileSync('./serviceAccountKey.json'));
+admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
-Deno.serve(async (req) => {
-  // Handle CORS preflight requests
+// ---- INIT Supabase ----
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ---- SERVER ----
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: CORS });
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    console.log('Starting document reminder check...');
-
-    // Get documents that need reminders today
-    const { data: documents, error: documentsError } = await supabaseClient
+    // 1) Fetch documents needing a reminder
+    const { data: docs, error: docsErr } = await supabase
       .from('documents_needing_reminders')
       .select('*');
 
-    if (documentsError) {
-      console.error('Error fetching documents:', documentsError);
-      throw documentsError;
+    if (docsErr) throw docsErr;
+
+    if (!docs?.length) {
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'No reminders due today',
+        documents: 0
+      }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`Found ${documents?.length || 0} documents needing reminders`);
-
-    if (!documents || documents.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'No documents need reminders today',
-          count: 0 
-        }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
-      );
-    }
-
-    // Get unique user IDs
-    const userIds = [...new Set(documents.map(doc => doc.user_id))];
-
-    // Get FCM tokens for these users
-    const { data: tokens, error: tokensError } = await supabaseClient
+    // 2) Fetch active tokens for these users
+    const userIds = [...new Set(docs.map(d => d.user_id))];
+    const { data: tokens, error: tokErr } = await supabase
       .from('user_tokens')
-      .select('user_id, token, device_type, is_active')
+      .select('user_id, token')
       .in('user_id', userIds)
       .eq('is_active', true);
 
-    if (tokensError) {
-      console.error('Error fetching user tokens:', tokensError);
-      throw tokensError;
+    if (tokErr) throw tokErr;
+    if (!tokens?.length) {
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'No active tokens',
+        documents: docs.length,
+        tokens: 0
+      }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`Found ${tokens?.length || 0} active tokens`);
-
-    if (!tokens || tokens.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'No active FCM tokens found for users',
-          documentsFound: documents.length,
-          tokensFound: 0
-        }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
-      );
-    }
-
-    // Group documents by user
-    const documentsByUser = documents.reduce((acc, doc) => {
-      if (!acc[doc.user_id]) {
-        acc[doc.user_id] = [];
-      }
-      acc[doc.user_id].push(doc);
+    // 3) Group docs by user
+    const byUser = docs.reduce<Record<string, typeof docs>>((acc, d) => {
+      (acc[d.user_id] ??= []).push(d);
       return acc;
-    }, {} as Record<string, Document[]>);
+    }, {});
 
-    const firebaseServerKey = Deno.env.get('FIREBASE_SERVER_KEY');
-    if (!firebaseServerKey) {
-      throw new Error('Firebase server key not configured');
-    }
+    let sent = 0, errors = 0;
+    const badTokens: string[] = [];
 
-    let successCount = 0;
-    let errorCount = 0;
-    const invalidTokens: string[] = [];
+    // 4) Send one notification per user
+    for (const { user_id, token } of tokens) {
+      const userDocs = byUser[user_id]!;
+      const count   = userDocs.length;
+      const names   = userDocs.map(d => d.name).join(', ');
+      const title   = count > 1
+        ? `📋 You have ${count} documents expiring`
+        : `📋 "${userDocs[0].name}" is expiring`;
+      const body    = count > 1 ? names : `Expires on ${userDocs[0].expiry_date}`;
 
-    // Send notifications to each user
-    for (const token of tokens) {
-      const userDocuments = documentsByUser[token.user_id];
-      if (!userDocuments || userDocuments.length === 0) continue;
+      // call FCM
+      const resp = await fetch('https://fcm.googleapis.com/fcm/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `key=${FIREBASE_KEY}`,
+          'Content-Type':  'application/json',
+        },
+        body: JSON.stringify({
+          to: token,
+          notification: { title, body },
+          data: { type: 'reminder', count: count.toString() },
+          priority: 'high'
+        }),
+      });
 
-      try {
-        // Calculate urgency based on expiry date
-        const now = new Date();
-        const urgentDocs = userDocuments.filter(doc => {
-          const expiryDate = new Date(doc.expiry_date);
-          const diffTime = expiryDate.getTime() - now.getTime();
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          return diffDays <= 3;
-        });
+      const result = await resp.json();
 
-        const isUrgent = urgentDocs.length > 0;
-        const docCount = userDocuments.length;
-        const docNames = userDocuments.map(doc => doc.name).join(', ');
-
-        const title = isUrgent 
-          ? '🚨 URGENT: Documents Expiring Soon!'
-          : '📋 Document Renewal Reminder';
-
-        const body = docCount === 1
-          ? `Your ${userDocuments[0].name} needs attention. Don't forget to renew it!`
-          : `You have ${docCount} documents that need attention: ${docNames}`;
-
-        // Send FCM notification
-        const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
-          method: 'POST',
-          headers: {
-            'Authorization': `key=${firebaseServerKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: token.token,
-            notification: {
-              title: title,
-              body: body,
-              icon: 'ic_notification',
-              color: isUrgent ? '#ef4444' : '#3b82f6',
-            },
-            data: {
-              type: 'document_reminder',
-              documentCount: docCount.toString(),
-              urgent: isUrgent.toString(),
-              documentIds: userDocuments.map(doc => doc.id).join(','),
-            },
-            priority: isUrgent ? 'high' : 'normal',
-          }),
-        });
-
-        const fcmResult = await fcmResponse.json();
-
-        if (fcmResult.success === 1) {
-          successCount++;
-          console.log(`Notification sent successfully to user ${token.user_id}`);
-        } else {
-          errorCount++;
-          console.error(`FCM error for user ${token.user_id}:`, fcmResult);
-          
-          // Check if token is invalid
-          if (fcmResult.results?.[0]?.error === 'InvalidRegistration' || 
-              fcmResult.results?.[0]?.error === 'NotRegistered') {
-            invalidTokens.push(token.token);
-          }
+      if (resp.ok && result.success === 1) {
+        sent++;
+      } else {
+        errors++;
+        console.error(`FCM error for ${user_id}:`, result);
+        // if invalid, mark for cleanup
+        const err = result.results?.[0]?.error;
+        if (['InvalidRegistration','NotRegistered'].includes(err)) {
+          badTokens.push(token);
         }
-
-      } catch (error) {
-        errorCount++;
-        console.error(`Error sending notification to user ${token.user_id}:`, error);
       }
     }
 
-    // Mark invalid tokens as inactive
-    if (invalidTokens.length > 0) {
-      const { error: updateError } = await supabaseClient
+    // 5) Cleanup invalid tokens
+    if (badTokens.length) {
+      const { error: clrErr } = await supabase
         .from('user_tokens')
         .update({ is_active: false })
-        .in('token', invalidTokens);
-
-      if (updateError) {
-        console.error('Error marking invalid tokens:', updateError);
-      } else {
-        console.log(`Marked ${invalidTokens.length} invalid tokens as inactive`);
-      }
+        .in('token', badTokens);
+      if (clrErr) console.error('Token cleanup error:', clrErr);
     }
 
-    const result = {
+    // 6) Return summary
+    return new Response(JSON.stringify({
       success: true,
-      message: 'Document reminders processed',
-      documentsFound: documents.length,
-      tokensFound: tokens.length,
-      notificationsSent: successCount,
-      errors: errorCount,
-      invalidTokensRemoved: invalidTokens.length,
-    };
+      documents: docs.length,
+      tokens:    tokens.length,
+      sent,
+      errors,
+      cleaned: badTokens.length
+    }), {
+      status: 200,
+      headers: { ...CORS, 'Content-Type': 'application/json' }
+    });
 
-    console.log('Reminder processing complete:', result);
-
-    return new Response(
-      JSON.stringify(result), 
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Error in send-document-reminders function:', error);
-    
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }), 
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
+  } catch (err) {
+    console.error('Reminder Function Error:', err);
+    return new Response(JSON.stringify({ success: false, error: err.message }), {
+      status: 500,
+      headers: { ...CORS, 'Content-Type': 'application/json' }
+    });
   }
 });
