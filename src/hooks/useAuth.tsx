@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { PushNotificationService } from '@/services/pushNotificationService';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -22,6 +23,7 @@ export const useAuth = () => {
           setTimeout(() => {
             supabase.rpc('update_last_login', { user_id: session.user.id });
           }, 0);
+          PushNotificationService.saveTokenOnLogin();
         }
       }
     );

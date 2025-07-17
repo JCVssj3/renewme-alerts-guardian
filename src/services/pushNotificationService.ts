@@ -4,6 +4,8 @@ import { supabase }         from '@/integrations/supabase/client';
 import { toast }            from '@/hooks/use-toast';
 
 export class PushNotificationService {
+  private static pendingToken: string | null = null;
+
   private static async getCurrentUser() {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) {
@@ -51,7 +53,7 @@ export class PushNotificationService {
         );
 
       if (error) {
-        console.error('Error saving FCM token:', error);
+        console.error('Error saving FCM token:', JSON.stringify(error, null, 2));
         return false;
       }
 
@@ -67,7 +69,13 @@ export class PushNotificationService {
     // 1) Registration successful
     PushNotifications.addListener('registration', async ({ value: token }) => {
       console.log('Push registration success, token:', token);
-      await this.saveFCMToken(token);
+      const user = await this.getCurrentUser();
+      if (user) {
+        await this.saveFCMToken(token);
+      } else {
+        this.pendingToken = token;
+        console.log('User not authenticated, token stored pending login');
+      }
     });
 
     // 2) Registration error
@@ -131,6 +139,16 @@ export class PushNotificationService {
       console.log('All tokens for user marked inactive');
     } catch (error) {
       console.error('Error clearing user tokens:', error);
+    }
+  }
+
+  static async saveTokenOnLogin(): Promise<void> {
+    if (this.pendingToken) {
+      console.log('User logged in, saving pending token');
+      const success = await this.saveFCMToken(this.pendingToken);
+      if (success) {
+        this.pendingToken = null;
+      }
     }
   }
 }
