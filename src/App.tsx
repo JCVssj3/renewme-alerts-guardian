@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useEffect } from "react";
-import { PushNotificationService } from "@/services/pushNotificationService";
+import { LocalNotificationService } from "@/services/localNotificationService";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -14,16 +14,11 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    const initializePushNotifications = async () => {
-      // Initialize push notifications
-      const success = await PushNotificationService.initializePushNotifications();
-      if (success) {
-        // Setup listeners for push notifications
-        await PushNotificationService.setupPushListeners();
-      }
+    const initializeLocalNotifications = async () => {
+      await LocalNotificationService.requestPermissions();
     };
 
-    initializePushNotifications();
+    initializeLocalNotifications();
   }, []);
 
   return (

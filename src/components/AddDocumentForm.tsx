@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ArrowUp, Plus, User, FileText } from 'lucide-react';
 import { Document, DocumentType, ReminderPeriod, Entity, CustomDocumentType } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
-import { NotificationService } from '@/services/notificationService';
+import { ReminderService, Reminder } from '@/services/reminderService';
+import { LocalNotificationService } from '@/services/localNotificationService';
 import { getAllDocumentTypeOptions } from '@/utils/documentIcons';
 import { useToast } from '@/hooks/use-toast';
 
@@ -145,17 +146,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
       if (editingDocument) {
         console.log('Updating existing document:', editingDocument.id);
-        await SupabaseStorageService.updateDocument(editingDocument.id, {
-          name: formData.name.trim(),
-          type: formData.type,
-          expiryDate: formData.expiryDate,
-          reminderPeriod: formData.reminderPeriod,
-          notes: formData.notes.trim(),
-          imageUrl: imageUrl,
-          entityId: formData.entityId
-        });
-        
-        await NotificationService.scheduleDocumentReminder({
+        const updatedDocument = {
           ...editingDocument,
           name: formData.name.trim(),
           type: formData.type,
@@ -164,7 +155,27 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
           notes: formData.notes.trim(),
           imageUrl: imageUrl,
           entityId: formData.entityId
-        });
+        };
+        await SupabaseStorageService.updateDocument(editingDocument.id, updatedDocument);
+
+        const reminders = await ReminderService.getReminders();
+        const existingReminder = reminders.find(r => r.documentId === editingDocument.id);
+        if (existingReminder) {
+          await LocalNotificationService.cancelNotification(existingReminder.notificationId!);
+          const newNotificationId = Math.floor(Math.random() * 10000);
+          await LocalNotificationService.scheduleNotification({
+            notifications: [
+              {
+                id: newNotificationId,
+                title: `Reminder: ${updatedDocument.name}`,
+                body: `Your ${updatedDocument.type} is expiring on ${updatedDocument.expiryDate.toLocaleDateString()}.`,
+                schedule: { at: new Date(updatedDocument.expiryDate.getTime() - 7 * 24 * 60 * 60 * 1000) }, // 1 week before
+              },
+            ],
+          });
+          await ReminderService.updateReminder({ ...existingReminder, notificationId: newNotificationId, expiryDate: updatedDocument.expiryDate.toISOString() });
+        }
+
       } else {
         const newDocument = {
           name: formData.name.trim(),
@@ -174,16 +185,32 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
           notes: formData.notes.trim(),
           imageUrl: imageUrl,
           entityId: formData.entityId,
-          isHandled: false
-        };
-
-        console.log('Adding new document:', newDocument);
-        await SupabaseStorageService.addDocument(newDocument);
-        await NotificationService.scheduleDocumentReminder({
-          ...newDocument,
+          isHandled: false,
           id: `temp_${Date.now()}`,
           createdAt: new Date(),
           updatedAt: new Date()
+        };
+
+        console.log('Adding new document:', newDocument);
+        const addedDocument = await SupabaseStorageService.addDocument(newDocument);
+
+        const notificationId = Math.floor(Math.random() * 10000);
+        await LocalNotificationService.scheduleNotification({
+          notifications: [
+            {
+              id: notificationId,
+              title: `Reminder: ${newDocument.name}`,
+              body: `Your ${newDocument.type} is expiring on ${newDocument.expiryDate.toLocaleDateString()}.`,
+              schedule: { at: new Date(newDocument.expiryDate.getTime() - 7 * 24 * 60 * 60 * 1000) }, // 1 week before
+            },
+          ],
+        });
+
+        await ReminderService.saveReminder({
+          documentId: addedDocument.id,
+          name: newDocument.name,
+          expiryDate: newDocument.expiryDate.toISOString(),
+          notificationId,
         });
       }
       

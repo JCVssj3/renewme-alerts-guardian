@@ -6,7 +6,8 @@ import { Plus, Bell, Settings, Calendar, Edit, Trash2, Image } from 'lucide-reac
 import ImageViewer from '@/components/ImageViewer';
 import { Document, SortOption } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
-import { NotificationService } from '@/services/notificationService';
+import { ReminderService } from '@/services/reminderService';
+import { LocalNotificationService } from '@/services/localNotificationService';
 import { calculateDaysUntilExpiry, getUrgencyStatus, formatExpiryDate } from '@/utils/dateUtils';
 import { getDocumentIcon, getDocumentTypeLabel } from '@/utils/documentIcons';
 interface DashboardProps {
@@ -26,10 +27,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   useEffect(() => {
     loadDocuments();
-
-    // Request notification permissions on load
-    NotificationService.requestPermissions();
   }, []);
+
   const loadDocuments = async () => {
     try {
       setLoading(true);
@@ -41,6 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       setLoading(false);
     }
   };
+
   const sortDocuments = (docs: Document[]): Document[] => {
     return [...docs].sort((a, b) => {
       switch (sortBy) {
@@ -65,34 +65,27 @@ const Dashboard: React.FC<DashboardProps> = ({
       }
     });
   };
+
   const filterDocuments = (docs: Document[]): Document[] => {
     if (filterType === 'all') return docs;
     return docs.filter(doc => doc.type === filterType);
   };
-  const handleMarkAsHandled = async (documentId: string) => {
-    try {
-      await SupabaseStorageService.updateDocument(documentId, {
-        isHandled: true
-      });
-      await NotificationService.cancelDocumentReminder(documentId);
-      loadDocuments();
-    } catch (error) {
-      console.error('Error marking document as handled:', error);
-    }
-  };
+
   const handleDeleteDocument = async (documentId: string) => {
     if (confirm('Are you sure you want to delete this document?')) {
       try {
         await SupabaseStorageService.deleteDocument(documentId);
-        await NotificationService.cancelDocumentReminder(documentId);
+        const reminders = await ReminderService.getReminders();
+        const reminderToDelete = reminders.find(r => r.documentId === documentId);
+        if (reminderToDelete) {
+          await LocalNotificationService.cancelNotification(reminderToDelete.notificationId!);
+          await ReminderService.deleteReminder(reminderToDelete.id);
+        }
         loadDocuments();
       } catch (error) {
         console.error('Error deleting document:', error);
       }
     }
-  };
-  const handleSendUrgentAlert = async (document: Document) => {
-    await NotificationService.scheduleUrgentAlert(document);
   };
 
   const handleViewImage = (imageUrl: string, documentName: string) => {
@@ -235,14 +228,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <Button size="sm" variant="outline" onClick={() => handleDeleteDocument(document.id)} className="mobile-tap text-status-danger hover:text-status-danger bg-card-bg border-primary-accent/20 hover:bg-status-danger/10 h-7 w-7 p-0">
                           <Trash2 className="h-3 w-3" />
                         </Button>
-                        {urgency === 'danger' || urgency === 'expired' ? <>
-                            <Button size="sm" variant="outline" onClick={() => handleSendUrgentAlert(document)} className="mobile-tap h-7 w-7 p-0 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent">
-                              <Bell className="h-3 w-3 text-primary-accent" />
-                            </Button>
-                            {!document.isHandled && <Button size="sm" variant="secondary" onClick={() => handleMarkAsHandled(document.id)} className="mobile-tap text-xs px-2 h-7 btn-secondary">
-                                Handle
-                              </Button>}
-                          </> : null}
                       </div>
                     </div>
                   </div>
