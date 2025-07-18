@@ -18,7 +18,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowUp, Plus, User, FileText, Trash2 } from 'lucide-react';
 import { Document, DocumentType, ReminderPeriod, Entity, CustomDocumentType } from '@/types';
-import { SupabaseStorageService } from '@/services/supabaseStorageService';
+import { StorageService } from '@/services/storageService';
 import { EntityService } from '@/services/entityService';
 import { CustomDocumentService } from '@/services/customDocumentService';
 import { NotificationService } from '@/services/notificationService';
@@ -124,58 +124,40 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     try {
       let imageUrl = formData.imageUrl;
       
-      // Upload image if selected
-      if (imageFile) {
-        console.log('Uploading image file:', imageFile.name);
-        const uploadedUrl = await SupabaseStorageService.uploadDocumentImage(imageFile);
-        if (uploadedUrl) {
-          imageUrl = uploadedUrl;
-          console.log('Image uploaded successfully:', uploadedUrl);
-        }
-      }
-
       if (editingDocument) {
         console.log('Updating existing document:', editingDocument.id);
-        await SupabaseStorageService.updateDocument(editingDocument.id, {
-          name: formData.name.trim(),
-          type: formData.type,
-          expiryDate: formData.expiryDate,
-          reminderPeriod: formData.reminderPeriod,
-          notes: formData.notes.trim(),
-          imageUrl: imageUrl,
-          entityId: formData.entityId
-        });
-        
-        await NotificationService.scheduleDocumentReminder({
+        const updatedDocument = {
           ...editingDocument,
           name: formData.name.trim(),
           type: formData.type,
           expiryDate: formData.expiryDate,
           reminderPeriod: formData.reminderPeriod,
           notes: formData.notes.trim(),
-          imageUrl: imageUrl,
-          entityId: formData.entityId
-        });
+          imageUrl: null, // TODO: Implement local image storage
+          entityId: formData.entityId,
+          updatedAt: new Date(),
+        };
+        await StorageService.updateDocument(editingDocument.id, updatedDocument);
+        await NotificationService.scheduleDocumentReminder(updatedDocument);
+
       } else {
-        const newDocument = {
+        const newDocument: Document = {
+          id: `doc_${Date.now()}`,
           name: formData.name.trim(),
           type: formData.type,
-          expiryDate: formData.expiryDate,
+          expiryDate: formData.expiryDate as Date,
           reminderPeriod: formData.reminderPeriod,
           notes: formData.notes.trim(),
-          imageUrl: imageUrl,
+          imageUrl: null, // TODO: Implement local image storage
           entityId: formData.entityId,
-          isHandled: false
+          isHandled: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         };
 
         console.log('Adding new document:', newDocument);
-        await SupabaseStorageService.addDocument(newDocument);
-        await NotificationService.scheduleDocumentReminder({
-          ...newDocument,
-          id: `temp_${Date.now()}`,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
+        await StorageService.addDocument(newDocument);
+        await NotificationService.scheduleDocumentReminder(newDocument);
       }
       
       console.log('Document saved successfully');
@@ -587,24 +569,6 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
               />
             </div>
 
-            {/* Document Image */}
-            <div className="space-y-2">
-              <Label className="text-text-primary">Document Image</Label>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleManualUpload}
-                className="mobile-tap w-full"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Browse Files
-              </Button>
-              {imageFile && (
-                <div className="text-sm text-text-secondary mt-2">
-                  Selected: {imageFile.name}
-                </div>
-              )}
-            </div>
 
             {/* Save Button */}
             <Button 

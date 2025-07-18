@@ -14,21 +14,23 @@ import { StorageService } from '@/services/storageService';
 import { EntityService } from '@/services/entityService';
 import EntityManagement from './EntityManagement';
 import CustomDocumentTypes from './CustomDocumentTypes';
+import { AppSettings, ReminderPeriod, Document, Entity } from '@/types';
+
 
 interface SettingsProps {
   onBack: () => void;
 }
 
 const Settings: React.FC<SettingsProps> = ({ onBack }) => {
-  const [settings, setSettings] = useState<AppSettings>(StorageService.getSettings());
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [entities, setEntities] = useState<Entity[]>([]);
   const [autoSort, setAutoSort] = useState(true);
   const [smartReminders, setSmartReminders] = useState(true);
   const [dataBackup, setDataBackup] = useState(false);
   const [quickActions, setQuickActions] = useState(true);
 
   // Stats for dashboard
-  const documents = StorageService.getDocuments();
-  const entities = EntityService.getEntities();
   const totalDocuments = documents.length;
   const expiringSoon = documents.filter(doc => {
     const daysLeft = Math.ceil((new Date(doc.expiryDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
@@ -37,7 +39,21 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   const completionRate = totalDocuments > 0 ? Math.round((documents.filter(doc => !doc.isHandled).length / totalDocuments) * 100) : 0;
 
   useEffect(() => {
-    StorageService.saveSettings(settings);
+    const loadData = async () => {
+      const storedSettings = await StorageService.getSettings();
+      const storedDocuments = await StorageService.getDocuments();
+      const storedEntities = await StorageService.getEntities();
+      setSettings(storedSettings);
+      setDocuments(storedDocuments);
+      setEntities(storedEntities);
+    };
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (settings) {
+      StorageService.saveSettings(settings);
+    }
   }, [settings]);
 
   const reminderOptions = [
@@ -52,6 +68,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   ];
 
   const handleNotificationToggle = (enabled: boolean) => {
+    if (!settings) return;
     setSettings({
       ...settings,
       notifications: {
@@ -62,6 +79,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   };
 
   const handleSoundToggle = (sound: boolean) => {
+    if (!settings) return;
     setSettings({
       ...settings,
       notifications: {
@@ -72,6 +90,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   };
 
   const handleVibrationToggle = (vibration: boolean) => {
+    if (!settings) return;
     setSettings({
       ...settings,
       notifications: {
@@ -82,6 +101,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   };
 
   const handleDefaultReminderChange = (period: ReminderPeriod) => {
+    if (!settings) return;
     setSettings({
       ...settings,
       notifications: {
@@ -223,14 +243,14 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="btn-secondary w-full"
-                    onClick={() => {
+                    onClick={async () => {
                       const data = {
-                        documents: StorageService.getDocuments(),
-                        entities: EntityService.getEntities(),
-                        settings: StorageService.getSettings()
+                        documents: await StorageService.getDocuments(),
+                        entities: await StorageService.getEntities(),
+                        settings: await StorageService.getSettings(),
                       };
                       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                       const url = URL.createObjectURL(blob);
@@ -260,66 +280,70 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="notifications" className="text-text-primary font-medium">Enable Notifications</Label>
-                  <p className="text-sm text-text-secondary">Receive renewal reminders</p>
-                </div>
-                <Switch
-                  id="notifications"
-                  checked={settings.notifications.enabled}
-                  onCheckedChange={handleNotificationToggle}
-                  className="data-[state=checked]:bg-primary-accent"
-                />
-              </div>
+              {settings && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="notifications" className="text-text-primary font-medium">Enable Notifications</Label>
+                      <p className="text-sm text-text-secondary">Receive renewal reminders</p>
+                    </div>
+                    <Switch
+                      id="notifications"
+                      checked={settings.notifications.enabled}
+                      onCheckedChange={handleNotificationToggle}
+                      className="data-[state=checked]:bg-primary-accent"
+                    />
+                  </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="sound" className="text-text-primary font-medium">Sound Alerts</Label>
-                  <p className="text-sm text-text-secondary">Play sound with notifications</p>
-                </div>
-                <Switch
-                  id="sound"
-                  checked={settings.notifications.sound}
-                  onCheckedChange={handleSoundToggle}
-                  disabled={!settings.notifications.enabled}
-                  className="data-[state=checked]:bg-primary-accent"
-                />
-              </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="sound" className="text-text-primary font-medium">Sound Alerts</Label>
+                      <p className="text-sm text-text-secondary">Play sound with notifications</p>
+                    </div>
+                    <Switch
+                      id="sound"
+                      checked={settings.notifications.sound}
+                      onCheckedChange={handleSoundToggle}
+                      disabled={!settings.notifications.enabled}
+                      className="data-[state=checked]:bg-primary-accent"
+                    />
+                  </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="vibration" className="text-text-primary font-medium">Vibration</Label>
-                  <p className="text-sm text-text-secondary">Vibrate device for alerts</p>
-                </div>
-                <Switch
-                  id="vibration"
-                  checked={settings.notifications.vibration}
-                  onCheckedChange={handleVibrationToggle}
-                  disabled={!settings.notifications.enabled}
-                  className="data-[state=checked]:bg-primary-accent"
-                />
-              </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="vibration" className="text-text-primary font-medium">Vibration</Label>
+                      <p className="text-sm text-text-secondary">Vibrate device for alerts</p>
+                    </div>
+                    <Switch
+                      id="vibration"
+                      checked={settings.notifications.vibration}
+                      onCheckedChange={handleVibrationToggle}
+                      disabled={!settings.notifications.enabled}
+                      className="data-[state=checked]:bg-primary-accent"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label className="text-text-primary font-medium">Default Reminder Period</Label>
-                <Select 
-                  value={settings.notifications.defaultReminderPeriod} 
-                  onValueChange={handleDefaultReminderChange}
-                  disabled={!settings.notifications.enabled}
-                >
-                  <SelectTrigger className="mobile-tap bg-card-bg border-primary-accent/20 focus:border-primary-accent">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card-bg border-primary-accent/20">
-                    {reminderOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label className="text-text-primary font-medium">Default Reminder Period</Label>
+                    <Select
+                      value={settings.notifications.defaultReminderPeriod}
+                      onValueChange={handleDefaultReminderChange}
+                      disabled={!settings.notifications.enabled}
+                    >
+                      <SelectTrigger className="mobile-tap bg-card-bg border-primary-accent/20 focus:border-primary-accent">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card-bg border-primary-accent/20">
+                        {reminderOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

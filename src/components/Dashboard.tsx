@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Bell, Settings, Calendar, Edit, Trash2 } from 'lucide-react';
 import { Document, SortOption } from '@/types';
-import { SupabaseStorageService } from '@/services/supabaseStorageService';
+import { StorageService } from '@/services/storageService';
 import { NotificationService } from '@/services/notificationService';
 import { calculateDaysUntilExpiry, getUrgencyStatus, formatExpiryDate } from '@/utils/dateUtils';
 import { getDocumentIcon, getDocumentTypeLabel } from '@/utils/documentIcons';
@@ -32,7 +32,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
   const loadDocuments = async () => {
     try {
       setLoading(true);
-      const docs = await SupabaseStorageService.getDocuments();
+      const docs = await StorageService.getDocuments();
       setDocuments(docs);
     } catch (error) {
       console.error('Error loading documents:', error);
@@ -68,7 +68,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
 
   const handleMarkAsHandled = async (documentId: string) => {
     try {
-      await SupabaseStorageService.updateDocument(documentId, { isHandled: true });
+      await StorageService.updateDocument(documentId, { isHandled: true });
       await NotificationService.cancelDocumentReminder(documentId);
       loadDocuments();
     } catch (error) {
@@ -79,7 +79,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onAddDocument, onEditDocument, on
   const handleDeleteDocument = async (documentId: string) => {
     if (confirm('Are you sure you want to delete this document?')) {
       try {
-        await SupabaseStorageService.deleteDocument(documentId);
+        await StorageService.deleteDocument(documentId);
         await NotificationService.cancelDocumentReminder(documentId);
         loadDocuments();
       } catch (error) {
