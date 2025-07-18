@@ -8,7 +8,7 @@ import { ArrowLeft, Bell } from 'lucide-react';
 import { AppSettings, ReminderPeriod } from '@/types';
 import { NotificationService } from '@/services/notificationService';
 import ScreenContainer from './ScreenContainer';
-import { Storage } from '@capacitor/storage';
+import { Preferences } from '@capacitor/preferences';
 
 const SETTINGS_KEY = 'app_settings';
 
@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     enabled: true,
     sound: true,
     vibration: true,
-    defaultReminderPeriod: '1_week'
+    defaultReminderPeriod: '1week'
   }
 };
 
@@ -36,7 +36,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
   const loadSettings = async () => {
     setLoading(true);
-    const { value } = await Storage.get({ key: SETTINGS_KEY });
+    const { value } = await Preferences.get({ key: SETTINGS_KEY });
     if (value) {
       setSettings(JSON.parse(value));
     }
@@ -45,7 +45,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
   const saveSettings = async (newSettings: AppSettings) => {
     setSettings(newSettings);
-    await Storage.set({ key: SETTINGS_KEY, value: JSON.stringify(newSettings) });
+    await Preferences.set({ key: SETTINGS_KEY, value: JSON.stringify(newSettings) });
     if (!newSettings.notifications.enabled) {
       NotificationService.cancelAllNotifications();
     } else {
@@ -106,7 +106,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className.flex.items-center.justify-between>
+          <div className="flex items-center justify-between">
             <Label htmlFor="notifications-enabled" className="text-text-primary">
               Enable Notifications
             </Label>

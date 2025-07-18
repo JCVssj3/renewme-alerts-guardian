@@ -1,14 +1,12 @@
 // src/services/notificationService.ts
-import { LocalNotifications, ScheduleOptions, LocalNotificationSchema } from '@capacitor/local-notifications';
-import { Storage } from '@capacitor/storage';
-import { toast } from '@/hooks/use-toast';
+import { LocalNotifications, LocalNotificationSchema } from '@capacitor/local-notifications';
 import { App } from '@capacitor/app';
+import { toast } from '@/hooks/use-toast';
 import { history } from '@/utils/history';
 import { Reminder, ReminderPeriod } from '@/types';
+import { reminderStorage } from './reminderStorage';
 
 export class NotificationService {
-  private static readonly REMINDERS_KEY = 'document_reminders';
-
   // 1. Permissions
   static async requestPermissions(): Promise<boolean> {
     try {
@@ -24,82 +22,26 @@ export class NotificationService {
       return true;
     } catch (error) {
       console.error('Error requesting permissions:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not request notification permissions.',
+        variant: 'destructive',
+      });
       return false;
     }
   }
 
   static async checkPermissions(): Promise<boolean> {
-    const { display } = await LocalNotifications.checkPermissions();
-    return display === 'granted';
-  }
-
-  // 2. Reminder Management (CRUD)
-  static async getReminders(): Promise<Reminder[]> {
-    const { value } = await Storage.get({ key: this.REMINDERS_KEY });
-    return value ? JSON.parse(value) : [];
-  }
-
-  static async saveReminders(reminders: Reminder[]): Promise<void> {
-    await Storage.set({
-      key: this.REMINDERS_KEY,
-      value: JSON.stringify(reminders),
-    });
-  }
-
-  static async addReminder(docId: string, docName: string, expiryDate: string, reminderPeriod: ReminderPeriod): Promise<void> {
-    const reminders = await this.getReminders();
-    const newReminder: Reminder = {
-      id: docId, // Use document ID as reminder ID
-      docName,
-      expiryDate,
-      reminderPeriod,
-      isEnabled: true,
-    };
-    const existingIndex = reminders.findIndex(r => r.id === docId);
-    if (existingIndex > -1) {
-      reminders[existingIndex] = newReminder;
-    } else {
-      reminders.push(newReminder);
-    }
-    await this.saveReminders(reminders);
-    await this.scheduleNotification(newReminder);
-  }
-
-  static async removeReminder(docId: string): Promise<void> {
-    let reminders = await this.getReminders();
-    const reminderToRemove = reminders.find(r => r.id === docId);
-    if (reminderToRemove) {
-      await this.cancelNotification(reminderToRemove.id);
-      reminders = reminders.filter(r => r.id !== docId);
-      await this.saveReminders(reminders);
+    try {
+      const { display } = await LocalNotifications.checkPermissions();
+      return display === 'granted';
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      return false;
     }
   }
 
-  static async updateReminder(updatedReminder: Reminder): Promise<void> {
-    let reminders = await this.getReminders();
-    const index = reminders.findIndex(r => r.id === updatedReminder.id);
-    if (index > -1) {
-      reminders[index] = updatedReminder;
-      await this.saveReminders(reminders);
-      // If reminders are disabled, cancel any pending notifications
-      if (!updatedReminder.isEnabled) {
-        await this.cancelNotification(updatedReminder.id);
-      } else {
-        await this.scheduleNotification(updatedReminder);
-      }
-    }
-  }
-
-  static async toggleReminder(docId: string, isEnabled: boolean): Promise<void> {
-    const reminders = await this.getReminders();
-    const reminder = reminders.find(r => r.id === docId);
-    if (reminder) {
-      reminder.isEnabled = isEnabled;
-      await this.updateReminder(reminder);
-    }
-  }
-
-  // 3. Scheduling
+  // 2. Scheduling
   static async scheduleNotification(reminder: Reminder): Promise<void> {
     if (!reminder.isEnabled) return;
 
@@ -108,7 +50,7 @@ export class NotificationService {
       const permissionGranted = await this.requestPermissions();
       if (!permissionGranted) return;
     }
-    
+
     // Cancel any existing notifications for this reminder to avoid duplicates
     await this.cancelNotification(reminder.id);
 
@@ -124,7 +66,16 @@ export class NotificationService {
         sound: 'beep.aiff',
       };
 
-      await LocalNotifications.schedule({ notifications: [notification] });
+      try {
+        await LocalNotifications.schedule({ notifications: [notification] });
+      } catch (error) {
+        console.error('Error scheduling notification:', error);
+        toast({
+          title: 'Error',
+          description: 'Could not schedule the reminder notification.',
+          variant: 'destructive',
+        });
+      }
     }
   }
 
@@ -134,17 +85,25 @@ export class NotificationService {
   }
 
   static async cancelNotification(docId: string): Promise<void> {
-    const notificationId = this.generateNotificationId(docId);
-    const pending = await LocalNotifications.getPending();
-    if (pending.notifications.some(n => n.id === notificationId)) {
-      await LocalNotifications.cancel({ notifications: [{ id: notificationId }] });
+    try {
+      const notificationId = this.generateNotificationId(docId);
+      const pending = await LocalNotifications.getPending();
+      if (pending.notifications.some(n => n.id === notificationId)) {
+        await LocalNotifications.cancel({ notifications: [{ id: notificationId }] });
+      }
+    } catch (error) {
+      console.error('Error cancelling notification:', error);
     }
   }
 
   static async cancelAllNotifications(): Promise<void> {
-    const pending = await LocalNotifications.getPending();
-    if (pending.notifications.length > 0) {
-      await LocalNotifications.cancel(pending);
+    try {
+      const pending = await LocalNotifications.getPending();
+      if (pending.notifications.length > 0) {
+        await LocalNotifications.cancel({ notifications: pending.notifications });
+      }
+    } catch (error) {
+      console.error('Error cancelling all notifications:', error);
     }
   }
 
@@ -159,8 +118,8 @@ export class NotificationService {
     return date;
   }
 
-  // 4. App Lifecycle
-  static async initialize() {
+  // 3. App Lifecycle
+  static initialize() {
     this.rescheduleAllReminders();
 
     // When the app is brought to the foreground, re-check and re-schedule reminders
@@ -184,9 +143,15 @@ export class NotificationService {
     const hasPermission = await this.checkPermissions();
     if (!hasPermission) return;
 
-    const reminders = await this.getReminders();
-    for (const reminder of reminders) {
-      await this.scheduleNotification(reminder);
+    try {
+      const reminders = await reminderStorage.getReminders();
+      for (const reminder of reminders) {
+        if (reminder.isEnabled) {
+          await this.scheduleNotification(reminder);
+        }
+      }
+    } catch (error) {
+      console.error('Error rescheduling reminders:', error);
     }
   }
 }

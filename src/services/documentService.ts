@@ -1,4 +1,4 @@
-import { Storage } from '@capacitor/storage';
+import { Preferences } from '@capacitor/preferences';
 import { Document } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -6,7 +6,7 @@ const DOCUMENTS_KEY = 'documents';
 
 export const DocumentService = {
   async getDocuments(): Promise<Document[]> {
-    const { value } = await Storage.get({ key: DOCUMENTS_KEY });
+    const { value } = await Preferences.get({ key: DOCUMENTS_KEY });
     if (value) {
       const documents = JSON.parse(value) as Document[];
       // Convert date strings back to Date objects
@@ -34,7 +34,7 @@ export const DocumentService = {
       updatedAt: new Date(),
     };
     documents.push(newDocument);
-    await Storage.set({ key: DOCUMENTS_KEY, value: JSON.stringify(documents) });
+    await Preferences.set({ key: DOCUMENTS_KEY, value: JSON.stringify(documents) });
     return newDocument;
   },
 
@@ -43,7 +43,7 @@ export const DocumentService = {
     const index = documents.findIndex(doc => doc.id === id);
     if (index > -1) {
       documents[index] = { ...documents[index], ...updates, updatedAt: new Date() };
-      await Storage.set({ key: DOCUMENTS_KEY, value: JSON.stringify(documents) });
+      await Preferences.set({ key: DOCUMENTS_KEY, value: JSON.stringify(documents) });
       return documents[index];
     }
     return undefined;
@@ -52,6 +52,6 @@ export const DocumentService = {
   async deleteDocument(id: string): Promise<void> {
     let documents = await this.getDocuments();
     documents = documents.filter(doc => doc.id !== id);
-    await Storage.set({ key: DOCUMENTS_KEY, value: JSON.stringify(documents) });
+    await Preferences.set({ key: DOCUMENTS_KEY, value: JSON.stringify(documents) });
   },
 };
