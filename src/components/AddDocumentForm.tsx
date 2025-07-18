@@ -148,12 +148,11 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       };
 
       if (editingDocument) {
-        const updatedDoc = await DocumentService.updateDocument(editingDocument.id, docData);
-        if (updatedDoc) {
-          await NotificationService.addReminder(updatedDoc.id, updatedDoc.name, updatedDoc.expiryDate.toISOString(), updatedDoc.reminderPeriod);
-        }
+        await SupabaseStorageService.updateDocument(editingDocument.id, docData);
+        await NotificationService.addReminder(editingDocument.id, docData.name, docData.expiryDate.toISOString(), docData.reminderPeriod);
       } else {
-        const newDoc = await DocumentService.addDocument(docData);
+        const newDoc = await SupabaseStorageService.addDocument(docData);
+        // @ts-ignore
         await NotificationService.addReminder(newDoc.id, newDoc.name, newDoc.expiryDate.toISOString(), newDoc.reminderPeriod);
       }
       

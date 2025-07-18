@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Settings, Calendar, Edit, Trash2, Image } from 'lucide-react';
 import ImageViewer from '@/components/ImageViewer';
-import { Document, SortOption } from '@/types';
-import { DocumentService } from '@/services/documentService';
+import { Document, SortOption, Entity } from '@/types';
+import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { NotificationService } from '@/services/notificationService';
 import { calculateDaysUntilExpiry, getUrgencyStatus, formatExpiryDate } from '@/utils/dateUtils';
 import { getDocumentIcon, getDocumentTypeLabel } from '@/utils/documentIcons';
@@ -22,26 +22,38 @@ const Dashboard: React.FC<DashboardProps> = ({
   onSettings
 }) => {
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [entities, setEntities] = useState<Entity[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('urgency');
   const [filterType, setFilterType] = useState<string>('all');
+  const [filterEntity, setFilterEntity] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
-    loadDocuments();
+    loadData();
     NotificationService.requestPermissions();
   }, []);
 
-  const loadDocuments = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const docs = await DocumentService.getDocuments();
+      const [docs, ents] = await Promise.all([
+        SupabaseStorageService.getDocuments(),
+        SupabaseStorageService.getEntities(),
+      ]);
       setDocuments(docs);
+      setEntities(ents);
     } catch (error) {
-      console.error('Error loading documents:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getEntityName = (entityId: string | undefined) => {
+    if (!entityId) return 'Unassigned';
+    const entity = entities.find(e => e.id === entityId);
+    return entity ? entity.name : 'Unknown Entity';
   };
 
   const sortDocuments = (docs: Document[]): Document[] => {
@@ -53,6 +65,8 @@ const Dashboard: React.FC<DashboardProps> = ({
           return a.type.localeCompare(b.type);
         case 'name':
           return a.name.localeCompare(b.name);
+        case 'entity':
+          return getEntityName(a.entityId).localeCompare(getEntityName(b.entityId));
         case 'urgency':
         default:
           const urgencyOrder = { expired: 0, danger: 1, warning: 2, safe: 3 };
@@ -64,15 +78,21 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const filterDocuments = (docs: Document[]): Document[] => {
-    if (filterType === 'all') return docs;
-    return docs.filter(doc => doc.type === filterType);
+    let filteredDocs = docs;
+    if (filterType !== 'all') {
+      filteredDocs = filteredDocs.filter(doc => doc.type === filterType);
+    }
+    if (filterEntity !== 'all') {
+      filteredDocs = filteredDocs.filter(doc => doc.entityId === filterEntity);
+    }
+    return filteredDocs;
   };
 
   const handleMarkAsHandled = async (doc: Document) => {
     try {
-      await DocumentService.updateDocument(doc.id, { isHandled: true });
+      await SupabaseStorageService.updateDocument(doc.id, { isHandled: true });
       await NotificationService.removeReminder(doc.id);
-      loadDocuments();
+      loadData();
     } catch (error) {
       console.error('Error marking document as handled:', error);
     }
@@ -81,9 +101,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   const handleDeleteDocument = async (documentId: string) => {
     if (window.confirm('Are you sure you want to delete this document?')) {
       try {
-        await DocumentService.deleteDocument(documentId);
+        await SupabaseStorageService.deleteDocument(documentId);
         await NotificationService.removeReminder(documentId);
-        loadDocuments();
+        loadData();
       } catch (error) {
         console.error('Error deleting document:', error);
       }
@@ -165,6 +185,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <option value="expiry_date">Sort by Expiry Date</option>
           <option value="document_type">Sort by Type</option>
           <option value="name">Sort by Name</option>
+          <option value="entity">Sort by Entity</option>
         </select>
 
         <select value={filterType} onChange={e => setFilterType(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-primary-accent/20 bg-card-bg text-text-primary text-sm focus:border-primary-accent">
@@ -177,6 +198,13 @@ const Dashboard: React.FC<DashboardProps> = ({
           <option value="certificate">Certificate</option>
           <option value="membership">Membership</option>
           <option value="other">Other</option>
+        </select>
+
+        <select value={filterEntity} onChange={e => setFilterEntity(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-primary-accent/20 bg-card-bg text-text-primary text-sm focus:border-primary-accent">
+          <option value="all">All Entities</option>
+          {entities.map(entity => (
+            <option key={entity.id} value={entity.id}>{entity.name}</option>
+          ))}
         </select>
       </div>
 
@@ -202,7 +230,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       <div className="text-xl sm:text-2xl flex-shrink-0">{getDocumentIcon(document.type)}</div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-text-primary text-sm sm:text-base truncate">{document.name}</h3>
-                        <p className="text-xs sm:text-sm text-text-secondary truncate">{getDocumentTypeLabel(document.type)}</p>
+                        <p className="text-xs sm:text-sm text-text-secondary truncate">{getEntityName(document.entityId)} - {getDocumentTypeLabel(document.type)}</p>
                         <p className="text-xs sm:text-sm text-text-secondary truncate">Expires: {formatExpiryDate(document.expiryDate)}</p>
                         {document.notes && <p className="text-xs text-text-secondary mt-1 line-clamp-2 break-words">{document.notes}</p>}
                       </div>

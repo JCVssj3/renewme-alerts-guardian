@@ -8,9 +8,9 @@ import { ArrowLeft, Bell } from 'lucide-react';
 import { AppSettings, ReminderPeriod } from '@/types';
 import { NotificationService } from '@/services/notificationService';
 import ScreenContainer from './ScreenContainer';
-import { Preferences } from '@capacitor/preferences';
-
-const SETTINGS_KEY = 'app_settings';
+import { SupabaseStorageService } from '@/services/supabaseStorageService';
+import EntityManagement from './EntityManagement';
+import CustomDocumentTypes from './CustomDocumentTypes';
 
 const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     enabled: true,
     sound: true,
     vibration: true,
-    defaultReminderPeriod: '1week'
+    defaultReminderPeriod: '1_week'
   }
 };
 
@@ -36,16 +36,16 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
   const loadSettings = async () => {
     setLoading(true);
-    const { value } = await Preferences.get({ key: SETTINGS_KEY });
-    if (value) {
-      setSettings(JSON.parse(value));
+    const storedSettings = await SupabaseStorageService.getSettings();
+    if (storedSettings) {
+      setSettings(storedSettings);
     }
     setLoading(false);
   };
 
   const saveSettings = async (newSettings: AppSettings) => {
     setSettings(newSettings);
-    await Preferences.set({ key: SETTINGS_KEY, value: JSON.stringify(newSettings) });
+    await SupabaseStorageService.saveSettings(newSettings);
     if (!newSettings.notifications.enabled) {
       NotificationService.cancelAllNotifications();
     } else {
@@ -151,6 +151,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
           )}
         </CardContent>
       </Card>
+
+      <EntityManagement />
+      <CustomDocumentTypes />
+
     </ScreenContainer>
   );
 };

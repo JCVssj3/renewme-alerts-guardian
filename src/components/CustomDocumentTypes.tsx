@@ -9,11 +9,7 @@ import { Plus, Trash2, FileText } from 'lucide-react';
 import { CustomDocumentType } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
 
-interface CustomDocumentTypesProps {
-  onBack: () => void;
-}
-
-const CustomDocumentTypes: React.FC<CustomDocumentTypesProps> = ({ onBack }) => {
+const CustomDocumentTypes: React.FC = () => {
   const [customTypes, setCustomTypes] = useState<CustomDocumentType[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);

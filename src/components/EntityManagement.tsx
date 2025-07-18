@@ -10,11 +10,7 @@ import { Plus, Edit, Trash2, Users } from 'lucide-react';
 import { Entity } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
 
-interface EntityManagementProps {
-  onBack: () => void;
-}
-
-const EntityManagement: React.FC<EntityManagementProps> = ({ onBack }) => {
+const EntityManagement: React.FC = () => {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
