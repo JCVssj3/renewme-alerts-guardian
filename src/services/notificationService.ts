@@ -1,193 +1,192 @@
-
-import { LocalNotifications } from '@capacitor/local-notifications';
-import { Document } from '@/types';
-import { calculateDaysUntilExpiry, getReminderDate } from '@/utils/dateUtils';
+// src/services/notificationService.ts
+import { LocalNotifications, ScheduleOptions, LocalNotificationSchema } from '@capacitor/local-notifications';
+import { Storage } from '@capacitor/storage';
+import { toast } from '@/hooks/use-toast';
+import { App } from '@capacitor/app';
+import { history } from '@/utils/history';
+import { Reminder, ReminderPeriod } from '@/types';
 
 export class NotificationService {
-  static async requestPermissions() {
+  private static readonly REMINDERS_KEY = 'document_reminders';
+
+  // 1. Permissions
+  static async requestPermissions(): Promise<boolean> {
     try {
-      const result = await LocalNotifications.requestPermissions();
-      console.log('Notification permissions result:', result);
-      return result.display === 'granted';
+      const { display } = await LocalNotifications.requestPermissions();
+      if (display === 'denied') {
+        toast({
+          title: 'Permissions Denied',
+          description: 'Enable notifications in settings to receive reminders.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+      return true;
     } catch (error) {
-      console.error('Error requesting notification permissions:', error);
+      console.error('Error requesting permissions:', error);
       return false;
     }
   }
 
-  static async scheduleDocumentReminder(document: Document) {
-    try {
-      const reminderDate = getReminderDate(document.expiryDate, document.reminderPeriod);
-      const daysLeft = calculateDaysUntilExpiry(document.expiryDate);
-      
-      // Don't schedule if the reminder date has already passed
-      if (reminderDate < new Date()) {
-        console.log('Reminder date has passed for document:', document.name);
-        return;
-      }
-
-      // Schedule the main reminder notification
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            title: '🚨 Document Expiring Soon!',
-            body: `Your ${document.name} expires in ${daysLeft} days. Don't forget to renew it!`,
-            id: parseInt(document.id.replace(/\D/g, '').slice(0, 8) || '1'),
-            schedule: { at: reminderDate },
-            sound: 'beep.wav',
-            attachments: undefined,
-            actionTypeId: '',
-            extra: {
-              documentId: document.id,
-              documentName: document.name,
-              expiryDate: document.expiryDate.toISOString(),
-              type: 'reminder'
-            }
-          }
-        ]
-      });
-
-      // Schedule follow-up notification 1 day after reminder
-      const followUpDate = new Date(reminderDate.getTime() + 24 * 60 * 60 * 1000);
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            title: '📋 Document Status Check',
-            body: `Have you handled the renewal for ${document.name}? Tap to mark as handled.`,
-            id: parseInt(document.id.replace(/\D/g, '').slice(0, 8) || '1') + 10000,
-            schedule: { at: followUpDate },
-            sound: 'beep.wav',
-            attachments: undefined,
-            actionTypeId: '',
-            extra: {
-              documentId: document.id,
-              documentName: document.name,
-              type: 'followup'
-            }
-          }
-        ]
-      });
-
-      // Schedule final warning if expiry is close
-      if (daysLeft <= 7 && daysLeft > 0) {
-        const finalWarningDate = new Date(document.expiryDate.getTime() - 24 * 60 * 60 * 1000); // 1 day before expiry
-        await LocalNotifications.schedule({
-          notifications: [
-            {
-              title: '🔴 FINAL WARNING!',
-              body: `${document.name} expires tomorrow! Take action now!`,
-              id: parseInt(document.id.replace(/\D/g, '').slice(0, 8) || '1') + 20000,
-              schedule: { at: finalWarningDate },
-              sound: 'beep.wav',
-              attachments: undefined,
-              actionTypeId: '',
-              extra: {
-                documentId: document.id,
-                documentName: document.name,
-                type: 'final_warning'
-              }
-            }
-          ]
-        });
-      }
-      
-      console.log(`Notifications scheduled for ${document.name}:`);
-      console.log(`- Reminder: ${reminderDate}`);
-      console.log(`- Follow-up: ${followUpDate}`);
-    } catch (error) {
-      console.error('Error scheduling notification:', error);
-    }
+  static async checkPermissions(): Promise<boolean> {
+    const { display } = await LocalNotifications.checkPermissions();
+    return display === 'granted';
   }
 
-  static async cancelDocumentReminder(documentId: string) {
-    try {
-      const baseNotificationId = parseInt(documentId.replace(/\D/g, '').slice(0, 8) || '1');
-      
-      // Cancel all notification types for this document
-      await LocalNotifications.cancel({
-        notifications: [
-          { id: baseNotificationId }, // Main reminder
-          { id: baseNotificationId + 10000 }, // Follow-up
-          { id: baseNotificationId + 20000 } // Final warning
-        ]
-      });
-      
-      console.log(`Cancelled all notifications for document ID: ${documentId}`);
-    } catch (error) {
-      console.error('Error cancelling notifications:', error);
-    }
+  // 2. Reminder Management (CRUD)
+  static async getReminders(): Promise<Reminder[]> {
+    const { value } = await Storage.get({ key: this.REMINDERS_KEY });
+    return value ? JSON.parse(value) : [];
   }
 
-  static async scheduleUrgentAlert(document: Document) {
-    const daysLeft = calculateDaysUntilExpiry(document.expiryDate);
-    
-    await LocalNotifications.schedule({
-      notifications: [
-        {
-          title: '🚨🚨 URGENT: Document Expiring! 🚨🚨',
-          body: `${document.name} expires ${daysLeft <= 0 ? 'today' : `in ${daysLeft} days`}! Take immediate action!`,
-          id: parseInt(document.id.replace(/\D/g, '').slice(-8) || '2'),
-          schedule: { at: new Date(Date.now() + 1000) }, // 1 second from now
-          sound: 'beep.wav',
-          attachments: undefined,
-          actionTypeId: '',
-          extra: {
-            documentId: document.id,
-            urgent: true,
-            type: 'urgent'
-          }
-        }
-      ]
+  static async saveReminders(reminders: Reminder[]): Promise<void> {
+    await Storage.set({
+      key: this.REMINDERS_KEY,
+      value: JSON.stringify(reminders),
     });
   }
 
-  // Schedule immediate notification for testing
-  static async testNotification() {
-    await LocalNotifications.schedule({
-      notifications: [
-        {
-          title: '🔔 Test Notification',
-          body: 'This is a test notification to verify the system is working properly.',
-          id: 999999,
-          schedule: { at: new Date(Date.now() + 2000) }, // 2 seconds from now
-          sound: 'beep.wav',
-          attachments: undefined,
-          actionTypeId: '',
-          extra: {
-            test: true,
-            type: 'test'
-          }
-        }
-      ]
-    });
-    console.log('Test notification scheduled for 2 seconds from now');
+  static async addReminder(docId: string, docName: string, expiryDate: string, reminderPeriod: ReminderPeriod): Promise<void> {
+    const reminders = await this.getReminders();
+    const newReminder: Reminder = {
+      id: docId, // Use document ID as reminder ID
+      docName,
+      expiryDate,
+      reminderPeriod,
+      isEnabled: true,
+    };
+    const existingIndex = reminders.findIndex(r => r.id === docId);
+    if (existingIndex > -1) {
+      reminders[existingIndex] = newReminder;
+    } else {
+      reminders.push(newReminder);
+    }
+    await this.saveReminders(reminders);
+    await this.scheduleNotification(newReminder);
   }
 
-  // Handle notification responses (when user taps notification)
-  static async handleNotificationAction(notification: any) {
-    const { extra } = notification;
-    
-    if (extra?.type === 'followup' || extra?.type === 'reminder') {
-      // Show user a prompt to mark document as handled
-      console.log(`User tapped notification for document: ${extra.documentName}`);
-      // You could trigger a UI update here to show the document in focus
+  static async removeReminder(docId: string): Promise<void> {
+    let reminders = await this.getReminders();
+    const reminderToRemove = reminders.find(r => r.id === docId);
+    if (reminderToRemove) {
+      await this.cancelNotification(reminderToRemove.id);
+      reminders = reminders.filter(r => r.id !== docId);
+      await this.saveReminders(reminders);
     }
   }
 
-  // Initialize notification listeners
-  static async initializeNotificationListeners() {
-    try {
-      await LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
-        this.handleNotificationAction(notification);
-      });
-      
-      await LocalNotifications.addListener('localNotificationReceived', (notification) => {
-        console.log('Notification received:', notification);
-      });
-      
-      console.log('Notification listeners initialized');
-    } catch (error) {
-      console.error('Error initializing notification listeners:', error);
+  static async updateReminder(updatedReminder: Reminder): Promise<void> {
+    let reminders = await this.getReminders();
+    const index = reminders.findIndex(r => r.id === updatedReminder.id);
+    if (index > -1) {
+      reminders[index] = updatedReminder;
+      await this.saveReminders(reminders);
+      // If reminders are disabled, cancel any pending notifications
+      if (!updatedReminder.isEnabled) {
+        await this.cancelNotification(updatedReminder.id);
+      } else {
+        await this.scheduleNotification(updatedReminder);
+      }
+    }
+  }
+
+  static async toggleReminder(docId: string, isEnabled: boolean): Promise<void> {
+    const reminders = await this.getReminders();
+    const reminder = reminders.find(r => r.id === docId);
+    if (reminder) {
+      reminder.isEnabled = isEnabled;
+      await this.updateReminder(reminder);
+    }
+  }
+
+  // 3. Scheduling
+  static async scheduleNotification(reminder: Reminder): Promise<void> {
+    if (!reminder.isEnabled) return;
+
+    const hasPermission = await this.checkPermissions();
+    if (!hasPermission) {
+      const permissionGranted = await this.requestPermissions();
+      if (!permissionGranted) return;
+    }
+    
+    // Cancel any existing notifications for this reminder to avoid duplicates
+    await this.cancelNotification(reminder.id);
+
+    const scheduleDate = this.getReminderDate(reminder.expiryDate, reminder.reminderPeriod);
+
+    if (scheduleDate > new Date()) {
+      const notification: LocalNotificationSchema = {
+        id: this.generateNotificationId(reminder.id),
+        title: `Reminder: ${reminder.docName}`,
+        body: `Your document is expiring soon.`,
+        schedule: { at: scheduleDate, allowWhileIdle: true },
+        extra: { docId: reminder.id },
+        sound: 'beep.aiff',
+      };
+
+      await LocalNotifications.schedule({ notifications: [notification] });
+    }
+  }
+
+  private static generateNotificationId(docId: string): number {
+    // Basic hash function to generate a numeric ID from a string
+    return Math.abs(docId.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0)) % 2147483647;
+  }
+
+  static async cancelNotification(docId: string): Promise<void> {
+    const notificationId = this.generateNotificationId(docId);
+    const pending = await LocalNotifications.getPending();
+    if (pending.notifications.some(n => n.id === notificationId)) {
+      await LocalNotifications.cancel({ notifications: [{ id: notificationId }] });
+    }
+  }
+
+  static async cancelAllNotifications(): Promise<void> {
+    const pending = await LocalNotifications.getPending();
+    if (pending.notifications.length > 0) {
+      await LocalNotifications.cancel(pending);
+    }
+  }
+
+  static getReminderDate(expiryDate: string, reminderPeriod: ReminderPeriod): Date {
+    const date = new Date(expiryDate);
+    switch (reminderPeriod) {
+      case '1day': date.setDate(date.getDate() - 1); break;
+      case '1week': date.setDate(date.getDate() - 7); break;
+      case '2weeks': date.setDate(date.getDate() - 14); break;
+      case '1month': date.setMonth(date.getMonth() - 1); break;
+    }
+    return date;
+  }
+
+  // 4. App Lifecycle
+  static async initialize() {
+    this.rescheduleAllReminders();
+
+    // When the app is brought to the foreground, re-check and re-schedule reminders
+    App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        this.rescheduleAllReminders();
+      }
+    });
+
+    // Handle notification clicks
+    LocalNotifications.addListener('localNotificationActionPerformed', ({ notification }) => {
+      const docId = notification.extra?.docId;
+      if (docId) {
+        // Navigate to the document detail screen
+        history.push(`/document/${docId}`);
+      }
+    });
+  }
+
+  static async rescheduleAllReminders(): Promise<void> {
+    const hasPermission = await this.checkPermissions();
+    if (!hasPermission) return;
+
+    const reminders = await this.getReminders();
+    for (const reminder of reminders) {
+      await this.scheduleNotification(reminder);
     }
   }
 }

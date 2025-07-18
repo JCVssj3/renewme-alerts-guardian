@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Bell, Settings, Calendar, Edit, Trash2, Image } from 'lucide-react';
+import { Plus, Settings, Calendar, Edit, Trash2, Image } from 'lucide-react';
 import ImageViewer from '@/components/ImageViewer';
 import { Document, SortOption } from '@/types';
-import { SupabaseStorageService } from '@/services/supabaseStorageService';
+import { DocumentService } from '@/services/documentService';
 import { NotificationService } from '@/services/notificationService';
 import { calculateDaysUntilExpiry, getUrgencyStatus, formatExpiryDate } from '@/utils/dateUtils';
 import { getDocumentIcon, getDocumentTypeLabel } from '@/utils/documentIcons';
+
 interface DashboardProps {
   onAddDocument: () => void;
   onEditDocument: (document: Document) => void;
   onSettings: () => void;
 }
+
 const Dashboard: React.FC<DashboardProps> = ({
   onAddDocument,
   onEditDocument,
@@ -24,16 +26,16 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [filterType, setFilterType] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
+
   useEffect(() => {
     loadDocuments();
-
-    // Request notification permissions on load
     NotificationService.requestPermissions();
   }, []);
+
   const loadDocuments = async () => {
     try {
       setLoading(true);
-      const docs = await SupabaseStorageService.getDocuments();
+      const docs = await DocumentService.getDocuments();
       setDocuments(docs);
     } catch (error) {
       console.error('Error loading documents:', error);
@@ -41,6 +43,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       setLoading(false);
     }
   };
+
   const sortDocuments = (docs: Document[]): Document[] => {
     return [...docs].sort((a, b) => {
       switch (sortBy) {
@@ -51,48 +54,40 @@ const Dashboard: React.FC<DashboardProps> = ({
         case 'name':
           return a.name.localeCompare(b.name);
         case 'urgency':
-          const urgencyOrder = {
-            expired: 0,
-            danger: 1,
-            warning: 2,
-            safe: 3
-          };
+        default:
+          const urgencyOrder = { expired: 0, danger: 1, warning: 2, safe: 3 };
           const aUrgency = getUrgencyStatus(a.expiryDate);
           const bUrgency = getUrgencyStatus(b.expiryDate);
           return urgencyOrder[aUrgency] - urgencyOrder[bUrgency];
-        default:
-          return 0;
       }
     });
   };
+
   const filterDocuments = (docs: Document[]): Document[] => {
     if (filterType === 'all') return docs;
     return docs.filter(doc => doc.type === filterType);
   };
-  const handleMarkAsHandled = async (documentId: string) => {
+
+  const handleMarkAsHandled = async (doc: Document) => {
     try {
-      await SupabaseStorageService.updateDocument(documentId, {
-        isHandled: true
-      });
-      await NotificationService.cancelDocumentReminder(documentId);
+      await DocumentService.updateDocument(doc.id, { isHandled: true });
+      await NotificationService.removeReminder(doc.id);
       loadDocuments();
     } catch (error) {
       console.error('Error marking document as handled:', error);
     }
   };
+
   const handleDeleteDocument = async (documentId: string) => {
-    if (confirm('Are you sure you want to delete this document?')) {
+    if (window.confirm('Are you sure you want to delete this document?')) {
       try {
-        await SupabaseStorageService.deleteDocument(documentId);
-        await NotificationService.cancelDocumentReminder(documentId);
+        await DocumentService.deleteDocument(documentId);
+        await NotificationService.removeReminder(documentId);
         loadDocuments();
       } catch (error) {
         console.error('Error deleting document:', error);
       }
     }
-  };
-  const handleSendUrgentAlert = async (document: Document) => {
-    await NotificationService.scheduleUrgentAlert(document);
   };
 
   const handleViewImage = (imageUrl: string, documentName: string) => {
@@ -235,14 +230,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <Button size="sm" variant="outline" onClick={() => handleDeleteDocument(document.id)} className="mobile-tap text-status-danger hover:text-status-danger bg-card-bg border-primary-accent/20 hover:bg-status-danger/10 h-7 w-7 p-0">
                           <Trash2 className="h-3 w-3" />
                         </Button>
-                        {urgency === 'danger' || urgency === 'expired' ? <>
-                            <Button size="sm" variant="outline" onClick={() => handleSendUrgentAlert(document)} className="mobile-tap h-7 w-7 p-0 bg-card-bg border-primary-accent/20 hover:bg-button-hover hover:border-primary-accent">
-                              <Bell className="h-3 w-3 text-primary-accent" />
-                            </Button>
-                            {!document.isHandled && <Button size="sm" variant="secondary" onClick={() => handleMarkAsHandled(document.id)} className="mobile-tap text-xs px-2 h-7 btn-secondary">
-                                Handle
-                              </Button>}
-                          </> : null}
+                        {(urgency === 'danger' || urgency === 'expired') && !document.isHandled && (
+                          <Button size="sm" variant="secondary" onClick={() => handleMarkAsHandled(document)} className="mobile-tap text-xs px-2 h-7 btn-secondary">
+                            Handle
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

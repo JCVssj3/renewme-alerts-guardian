@@ -3,28 +3,57 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/providers/ThemeProvider";
-import { useEffect } from "react";
-import { PushNotificationService } from "@/services/pushNotificationService";
+import { useEffect, useState } from "react";
+import { NotificationService } from "@/services/notificationService";
 import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import Settings from "./components/Settings";
+import { Document } from "./types";
+import AddDocumentForm from "./components/AddDocumentForm";
+import Dashboard from "./components/Dashboard";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  useEffect(() => {
-    const initializePushNotifications = async () => {
-      // Initialize push notifications
-      const success = await PushNotificationService.initializePushNotifications();
-      if (success) {
-        // Setup listeners for push notifications
-        await PushNotificationService.setupPushListeners();
-      }
-    };
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
 
-    initializePushNotifications();
+  useEffect(() => {
+    NotificationService.initialize();
   }, []);
+
+  const handleEditDocument = (doc: Document) => {
+    setEditingDocument(doc);
+    setCurrentPage('addDocument');
+  };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return (
+          <Dashboard
+            onAddDocument={() => {
+              setEditingDocument(null);
+              setCurrentPage('addDocument');
+            }}
+            onEditDocument={handleEditDocument}
+            onSettings={() => setCurrentPage('settings')}
+          />
+        );
+      case 'addDocument':
+        return (
+          <AddDocumentForm
+            onBack={() => setCurrentPage('dashboard')}
+            onSuccess={() => setCurrentPage('dashboard')}
+            editingDocument={editingDocument}
+          />
+        );
+      case 'settings':
+        return <Settings onBack={() => setCurrentPage('dashboard')} />;
+      default:
+        return <Index />;
+    }
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -32,13 +61,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          {renderPage()}
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

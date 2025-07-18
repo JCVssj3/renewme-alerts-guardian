@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowUp, Plus, User, FileText } from 'lucide-react';
 import { Document, DocumentType, ReminderPeriod, Entity, CustomDocumentType } from '@/types';
-import { SupabaseStorageService } from '@/services/supabaseStorageService';
+import { DocumentService } from '@/services/documentService';
 import { NotificationService } from '@/services/notificationService';
 import { getAllDocumentTypeOptions } from '@/utils/documentIcons';
 import { useToast } from '@/hooks/use-toast';
+import { SupabaseStorageService } from '@/services/supabaseStorageService';
 
 interface AddDocumentFormProps {
   onBack: () => void;
@@ -27,7 +28,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     name: '',
     type: '' as DocumentType,
     expiryDate: undefined as Date | undefined,
-    reminderPeriod: '2_weeks' as ReminderPeriod,
+    reminderPeriod: '1_week' as ReminderPeriod,
     notes: '',
     imageUrl: '',
     entityId: 'self'
@@ -61,7 +62,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     { value: '3_months', label: '3 Months Before' },
     { value: '6_months', label: '6 Months Before' },
     { value: '9_months', label: '9 Months Before' },
-    { value: '12_months', label: '12 Months Before' }
+    { value: '12_months', label: '12 Months Before' },
   ];
 
   const entityIcons = ['👤', '👨', '👩', '👶', '👴', '👵', '👨‍💼', '👩‍💼', '👨‍⚕️', '👩‍⚕️', '🏢', '🏠'];
@@ -106,10 +107,12 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Form submission started with data:', formData);
-    
     if (!formData.name || !formData.type || !formData.expiryDate) {
-      alert('Please fill in all required fields');
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -118,76 +121,42 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     try {
       let imageUrl = formData.imageUrl;
       
-      // Upload image if selected
       if (imageFile) {
         setIsUploading(true);
-        console.log('Uploading image file:', imageFile.name);
         const uploadedUrl = await SupabaseStorageService.uploadDocumentImage(imageFile);
         if (uploadedUrl) {
           imageUrl = uploadedUrl;
-          console.log('Image uploaded successfully:', uploadedUrl);
-          toast({
-            title: "Image uploaded",
-            description: "Document image uploaded successfully"
-          });
         } else {
           toast({
             title: "Upload failed",
             description: "Failed to upload image. Please try again.",
             variant: "destructive"
           });
-          setIsUploading(false);
-          setIsSubmitting(false);
-          return;
         }
         setIsUploading(false);
       }
 
-      if (editingDocument) {
-        console.log('Updating existing document:', editingDocument.id);
-        await SupabaseStorageService.updateDocument(editingDocument.id, {
-          name: formData.name.trim(),
-          type: formData.type,
-          expiryDate: formData.expiryDate,
-          reminderPeriod: formData.reminderPeriod,
-          notes: formData.notes.trim(),
-          imageUrl: imageUrl,
-          entityId: formData.entityId
-        });
-        
-        await NotificationService.scheduleDocumentReminder({
-          ...editingDocument,
-          name: formData.name.trim(),
-          type: formData.type,
-          expiryDate: formData.expiryDate,
-          reminderPeriod: formData.reminderPeriod,
-          notes: formData.notes.trim(),
-          imageUrl: imageUrl,
-          entityId: formData.entityId
-        });
-      } else {
-        const newDocument = {
-          name: formData.name.trim(),
-          type: formData.type,
-          expiryDate: formData.expiryDate,
-          reminderPeriod: formData.reminderPeriod,
-          notes: formData.notes.trim(),
-          imageUrl: imageUrl,
-          entityId: formData.entityId,
-          isHandled: false
-        };
+      const docData = {
+        name: formData.name.trim(),
+        type: formData.type,
+        expiryDate: formData.expiryDate,
+        reminderPeriod: formData.reminderPeriod,
+        notes: formData.notes.trim(),
+        imageUrl: imageUrl,
+        entityId: formData.entityId,
+        isHandled: false,
+      };
 
-        console.log('Adding new document:', newDocument);
-        await SupabaseStorageService.addDocument(newDocument);
-        await NotificationService.scheduleDocumentReminder({
-          ...newDocument,
-          id: `temp_${Date.now()}`,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
+      if (editingDocument) {
+        const updatedDoc = await DocumentService.updateDocument(editingDocument.id, docData);
+        if (updatedDoc) {
+          await NotificationService.addReminder(updatedDoc.id, updatedDoc.name, updatedDoc.expiryDate.toISOString(), updatedDoc.reminderPeriod);
+        }
+      } else {
+        const newDoc = await DocumentService.addDocument(docData);
+        await NotificationService.addReminder(newDoc.id, newDoc.name, newDoc.expiryDate.toISOString(), newDoc.reminderPeriod);
       }
       
-      console.log('Document saved successfully');
       toast({
         title: editingDocument ? "Document updated" : "Document saved",
         description: editingDocument ? "Document updated successfully" : "New document added successfully"
@@ -202,7 +171,6 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       });
     } finally {
       setIsSubmitting(false);
-      setIsUploading(false);
     }
   };
 
@@ -213,7 +181,6 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
           toast({
             title: "File too large",
@@ -223,7 +190,6 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
           return;
         }
         
-        // Validate file type
         if (!file.type.startsWith('image/')) {
           toast({
             title: "Invalid file type",
@@ -238,7 +204,6 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
           title: "Image selected",
           description: `${file.name} ready to upload`
         });
-        console.log('Manual file upload successful:', file.name);
       }
     };
     input.click();
@@ -254,8 +219,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
         ...entityFormData
       });
       await loadEntities();
-      // Set the newly created entity as selected
-      setFormData({ ...formData, entityId: 'self' }); // Default to 'self' for now, as we can't get the new ID easily
+      setFormData({ ...formData, entityId: 'self' });
       setEntityFormData({ name: '', tag: '', icon: '👤', color: '#3B82F6' });
       setIsAddEntityDialogOpen(false);
       toast({
