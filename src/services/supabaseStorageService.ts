@@ -1,23 +1,18 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Document, AppSettings, Entity, CustomDocumentType, ReminderPeriod } from '@/types';
 
-export class SupabaseStorageService {
-  // Helper method to get current user ID
-  private static async getCurrentUserId(): Promise<string | null> {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id || null;
-  }
+// Use null for anonymous operations to bypass RLS
+const ANONYMOUS_USER_ID = null;
 
+export class SupabaseStorageService {
   // Documents
   static async getDocuments(): Promise<Document[]> {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) return [];
-
       const { data, error } = await supabase
         .from('documents')
         .select('*')
-        .eq('user_id', userId)
+        .is('user_id', ANONYMOUS_USER_ID)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -40,13 +35,10 @@ export class SupabaseStorageService {
 
   static async addDocument(document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'>) {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-
       const { error } = await supabase
         .from('documents')
         .insert({
-          user_id: userId,
+          user_id: ANONYMOUS_USER_ID,
           name: document.name,
           type: document.type,
           expiry_date: document.expiryDate.toISOString(),
@@ -66,9 +58,6 @@ export class SupabaseStorageService {
 
   static async updateDocument(documentId: string, updates: Partial<Document>) {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-
       const updateData: any = {};
       
       if (updates.name) updateData.name = updates.name;
@@ -84,7 +73,7 @@ export class SupabaseStorageService {
         .from('documents')
         .update(updateData)
         .eq('id', documentId)
-        .eq('user_id', userId);
+        .is('user_id', ANONYMOUS_USER_ID);
 
       if (error) throw error;
     } catch (error) {
@@ -95,14 +84,11 @@ export class SupabaseStorageService {
 
   static async deleteDocument(documentId: string) {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-
       const { error } = await supabase
         .from('documents')
         .delete()
         .eq('id', documentId)
-        .eq('user_id', userId);
+        .is('user_id', ANONYMOUS_USER_ID);
 
       if (error) throw error;
     } catch (error) {
@@ -114,20 +100,17 @@ export class SupabaseStorageService {
   // Entities
   static async getEntities(): Promise<Entity[]> {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) return [];
-
       const { data, error } = await supabase
         .from('entities')
         .select('*')
-        .eq('user_id', userId)
+        .is('user_id', ANONYMOUS_USER_ID)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
       // If no entities exist, create default 'self' entity
       if (!data || data.length === 0) {
-        await this.createDefaultEntity(userId);
+        await this.createDefaultEntity();
         return this.getEntities();
       }
 
@@ -142,13 +125,13 @@ export class SupabaseStorageService {
     }
   }
 
-  private static async createDefaultEntity(userId: string) {
+  private static async createDefaultEntity() {
     try {
       await supabase
         .from('entities')
         .insert({
           id: 'self',
-          user_id: userId,
+          user_id: ANONYMOUS_USER_ID,
           name: 'Myself',
           tag: 'Personal',
           icon: '👤',
@@ -161,14 +144,11 @@ export class SupabaseStorageService {
 
   static async addEntity(entity: Omit<Entity, 'createdAt' | 'updatedAt'>) {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-
       const { error } = await supabase
         .from('entities')
         .insert({
           id: entity.id,
-          user_id: userId,
+          user_id: ANONYMOUS_USER_ID,
           name: entity.name,
           tag: entity.tag,
           icon: entity.icon,
@@ -184,9 +164,6 @@ export class SupabaseStorageService {
 
   static async updateEntity(entityId: string, updates: Partial<Entity>) {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-
       const updateData: any = {};
       
       if (updates.name) updateData.name = updates.name;
@@ -198,7 +175,7 @@ export class SupabaseStorageService {
         .from('entities')
         .update(updateData)
         .eq('id', entityId)
-        .eq('user_id', userId);
+        .is('user_id', ANONYMOUS_USER_ID);
 
       if (error) throw error;
     } catch (error) {
@@ -209,16 +186,13 @@ export class SupabaseStorageService {
 
   static async deleteEntity(entityId: string) {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-
       if (entityId === 'self') return; // Prevent deleting default entity
 
       const { error } = await supabase
         .from('entities')
         .delete()
         .eq('id', entityId)
-        .eq('user_id', userId);
+        .is('user_id', ANONYMOUS_USER_ID);
 
       if (error) throw error;
     } catch (error) {
@@ -230,13 +204,10 @@ export class SupabaseStorageService {
   // Custom Document Types
   static async getCustomDocumentTypes(): Promise<CustomDocumentType[]> {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) return [];
-
       const { data, error } = await supabase
         .from('custom_document_types')
         .select('*')
-        .eq('user_id', userId)
+        .is('user_id', ANONYMOUS_USER_ID)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -253,13 +224,10 @@ export class SupabaseStorageService {
 
   static async addCustomDocumentType(type: Omit<CustomDocumentType, 'id' | 'createdAt'>) {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-
       const { error } = await supabase
         .from('custom_document_types')
         .insert({
-          user_id: userId,
+          user_id: ANONYMOUS_USER_ID,
           name: type.name,
           icon: type.icon
         });
@@ -273,14 +241,11 @@ export class SupabaseStorageService {
 
   static async deleteCustomDocumentType(typeId: string) {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-
       const { error } = await supabase
         .from('custom_document_types')
         .delete()
         .eq('id', typeId)
-        .eq('user_id', userId);
+        .is('user_id', ANONYMOUS_USER_ID);
 
       if (error) throw error;
     } catch (error) {
@@ -292,46 +257,27 @@ export class SupabaseStorageService {
   // Settings
   static async getSettings(): Promise<AppSettings> {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) {
-        console.log('No user ID found, returning default settings');
-        return {
-          theme: 'system',
-          notifications: {
-            enabled: true,
-            sound: true,
-            vibration: true,
-            defaultReminderPeriod: '2_weeks'
-          }
-        };
-      }
-
-      console.log('Fetching settings for user:', userId);
       const { data, error } = await supabase
         .from('user_settings')
         .select('*')
-        .eq('user_id', userId)
+        .is('user_id', ANONYMOUS_USER_ID)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching settings:', error);
-        throw error;
-      }
+      if (error && error.code !== 'PGRST116') throw error;
 
       if (!data) {
-        console.log('No settings found, creating default settings');
-        await this.createDefaultSettings(userId);
+        // Create default settings
+        await this.createDefaultSettings();
         return this.getSettings();
       }
 
-      console.log('Raw settings data:', data);
       return {
-        theme: 'system',
+        theme: data.theme as 'light' | 'dark' | 'system',
         notifications: {
-          enabled: data.notifications_enabled ?? true,
-          sound: data.notifications_sound ?? true,
-          vibration: data.notifications_vibration ?? true,
-          defaultReminderPeriod: (data.default_reminder_period as ReminderPeriod) || '2_weeks'
+          enabled: data.notifications_enabled,
+          sound: data.notifications_sound,
+          vibration: data.notifications_vibration,
+          defaultReminderPeriod: data.default_reminder_period as ReminderPeriod
         }
       };
     } catch (error) {
@@ -348,24 +294,18 @@ export class SupabaseStorageService {
     }
   }
 
-  private static async createDefaultSettings(userId: string) {
+  private static async createDefaultSettings() {
     try {
-      console.log('Creating default settings for user:', userId);
-      const { error } = await supabase
+      await supabase
         .from('user_settings')
         .insert({
-          user_id: userId,
+          user_id: ANONYMOUS_USER_ID,
+          theme: 'system',
           notifications_enabled: true,
           notifications_sound: true,
           notifications_vibration: true,
           default_reminder_period: '2_weeks'
         });
-      
-      if (error) {
-        console.error('Error creating default settings:', error);
-        throw error;
-      }
-      console.log('Default settings created successfully');
     } catch (error) {
       console.error('Error creating default settings:', error);
     }
@@ -373,39 +313,29 @@ export class SupabaseStorageService {
 
   static async saveSettings(settings: AppSettings) {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-
-      console.log('Saving settings for user:', userId, settings);
       const { error } = await supabase
         .from('user_settings')
         .upsert({
-          user_id: userId,
+          user_id: ANONYMOUS_USER_ID,
+          theme: settings.theme,
           notifications_enabled: settings.notifications.enabled,
           notifications_sound: settings.notifications.sound,
           notifications_vibration: settings.notifications.vibration,
           default_reminder_period: settings.notifications.defaultReminderPeriod
         });
 
-      if (error) {
-        console.error('Error saving settings:', error);
-        throw error;
-      }
-      console.log('Settings saved successfully');
+      if (error) throw error;
     } catch (error) {
       console.error('Error saving settings:', error);
       throw error;
     }
   }
 
-  // Document Image Upload
+  // Document Image Upload - Simplified without auth
   static async uploadDocumentImage(file: File): Promise<string | null> {
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) throw new Error('User not authenticated');
-
       const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}/${Date.now()}.${fileExt}`;
+      const fileName = `anonymous/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('document-images')

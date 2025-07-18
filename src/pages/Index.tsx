@@ -1,106 +1,76 @@
 
-import React, { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import React, { useState, useEffect } from 'react';
 import Dashboard from '@/components/Dashboard';
-import AuthPage from '@/components/AuthPage';
 import AddDocumentForm from '@/components/AddDocumentForm';
 import Settings from '@/components/Settings';
-import EntityManagement from '@/components/EntityManagement';
-import CustomDocumentTypes from '@/components/CustomDocumentTypes';
 import { Document } from '@/types';
-import ScreenContainer from '@/components/ScreenContainer';
+import { NotificationService } from '@/services/notificationService';
 
-type Screen = 'dashboard' | 'auth' | 'add-document' | 'settings' | 'entities' | 'document-types';
+type AppView = 'dashboard' | 'add-document' | 'edit-document' | 'settings';
 
 const Index = () => {
-  const { user, loading } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
-  const [documentToEdit, setDocumentToEdit] = useState<Document | undefined>();
+  const [currentView, setCurrentView] = useState<AppView>('dashboard');
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
 
-  // Show loading screen while checking authentication
-  if (loading) {
-    return (
-      <ScreenContainer className="flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg text-text-secondary">Loading RenewMe...</div>
-        </div>
-      </ScreenContainer>
-    );
-  }
-
-  // Show auth page if user is not authenticated
-  if (!user) {
-    return (
-      <AuthPage
-        onBack={() => setCurrentScreen('dashboard')}
-        onAuthSuccess={() => setCurrentScreen('dashboard')}
-      />
-    );
-  }
-
-  // User is authenticated, show app screens
-  const handleEditDocument = (document: Document) => {
-    setDocumentToEdit(document);
-    setCurrentScreen('add-document');
-  };
+  useEffect(() => {
+    console.log('RenewMe app initialized');
+    
+    // Initialize notification system
+    const initNotifications = async () => {
+      await NotificationService.requestPermissions();
+      await NotificationService.initializeNotificationListeners();
+    };
+    
+    initNotifications();
+  }, []);
 
   const handleAddDocument = () => {
-    setDocumentToEdit(undefined);
-    setCurrentScreen('add-document');
+    setEditingDocument(null);
+    setCurrentView('add-document');
   };
 
-  const handleBackToDashboard = () => {
-    setDocumentToEdit(undefined);
-    setCurrentScreen('dashboard');
+  const handleEditDocument = (document: Document) => {
+    setEditingDocument(document);
+    setCurrentView('edit-document');
   };
 
-  const handleDocumentSuccess = () => {
-    setDocumentToEdit(undefined);
-    setCurrentScreen('dashboard');
+  const handleSettings = () => {
+    setCurrentView('settings');
   };
 
-  switch (currentScreen) {
-    case 'auth':
-      return (
-        <AuthPage
-          onBack={() => setCurrentScreen('dashboard')}
-          onAuthSuccess={() => setCurrentScreen('dashboard')}
-        />
-      );
-    
-    case 'add-document':
-      return (
-        <AddDocumentForm
-          onBack={handleBackToDashboard}
-          onSuccess={handleDocumentSuccess}
-          editingDocument={documentToEdit}
-        />
-      );
-    
-    case 'settings':
-      return (
-        <Settings onBack={handleBackToDashboard} />
-      );
-    
-    case 'entities':
-      return (
-        <EntityManagement onBack={handleBackToDashboard} />
-      );
-    
-    case 'document-types':
-      return (
-        <CustomDocumentTypes onBack={handleBackToDashboard} />
-      );
-    
-    default:
-      return (
-        <Dashboard
+  const handleBack = () => {
+    setEditingDocument(null);
+    setCurrentView('dashboard');
+  };
+
+  const handleAddSuccess = () => {
+    setEditingDocument(null);
+    setCurrentView('dashboard');
+  };
+
+  return (
+    <div className="min-h-screen bg-primary-bg p-4">
+      {currentView === 'dashboard' && (
+        <Dashboard 
           onAddDocument={handleAddDocument}
           onEditDocument={handleEditDocument}
-          onSettings={() => setCurrentScreen('settings')}
+          onSettings={handleSettings}
         />
-      );
-  }
+      )}
+      
+      {(currentView === 'add-document' || currentView === 'edit-document') && (
+        <AddDocumentForm 
+          onBack={handleBack}
+          onSuccess={handleAddSuccess}
+          editingDocument={editingDocument}
+        />
+      )}
+      
+      {currentView === 'settings' && (
+        <Settings onBack={handleBack} />
+      )}
+    </div>
+  );
 };
 
 export default Index;

@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ArrowUp, Plus, User, FileText } from 'lucide-react';
 import { Document, DocumentType, ReminderPeriod, Entity, CustomDocumentType } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
+import { EntityService } from '@/services/entityService';
+import { CustomDocumentService } from '@/services/customDocumentService';
 import { NotificationService } from '@/services/notificationService';
 import { getAllDocumentTypeOptions } from '@/utils/documentIcons';
-import { useToast } from '@/hooks/use-toast';
 
 interface AddDocumentFormProps {
   onBack: () => void;
@@ -20,7 +21,6 @@ interface AddDocumentFormProps {
 }
 
 const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, editingDocument }) => {
-  const { toast } = useToast();
   const [entities, setEntities] = useState<Entity[]>([]);
   const [customDocumentTypes, setCustomDocumentTypes] = useState<CustomDocumentType[]>([]);
   const [formData, setFormData] = useState({
@@ -35,7 +35,6 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   
   // Add Entity Dialog State
   const [isAddEntityDialogOpen, setIsAddEntityDialogOpen] = useState(false);
@@ -85,22 +84,14 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     }
   }, [editingDocument]);
 
-  const loadEntities = async () => {
-    try {
-      const loadedEntities = await SupabaseStorageService.getEntities();
-      setEntities(loadedEntities);
-    } catch (error) {
-      console.error('Error loading entities:', error);
-    }
+  const loadEntities = () => {
+    const loadedEntities = EntityService.getEntities();
+    setEntities(loadedEntities);
   };
 
-  const loadCustomDocumentTypes = async () => {
-    try {
-      const types = await SupabaseStorageService.getCustomDocumentTypes();
-      setCustomDocumentTypes(types);
-    } catch (error) {
-      console.error('Error loading custom document types:', error);
-    }
+  const loadCustomDocumentTypes = () => {
+    const types = CustomDocumentService.getCustomDocumentTypes();
+    setCustomDocumentTypes(types);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -120,27 +111,12 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       
       // Upload image if selected
       if (imageFile) {
-        setIsUploading(true);
         console.log('Uploading image file:', imageFile.name);
         const uploadedUrl = await SupabaseStorageService.uploadDocumentImage(imageFile);
         if (uploadedUrl) {
           imageUrl = uploadedUrl;
           console.log('Image uploaded successfully:', uploadedUrl);
-          toast({
-            title: "Image uploaded",
-            description: "Document image uploaded successfully"
-          });
-        } else {
-          toast({
-            title: "Upload failed",
-            description: "Failed to upload image. Please try again.",
-            variant: "destructive"
-          });
-          setIsUploading(false);
-          setIsSubmitting(false);
-          return;
         }
-        setIsUploading(false);
       }
 
       if (editingDocument) {
@@ -188,21 +164,12 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       }
       
       console.log('Document saved successfully');
-      toast({
-        title: editingDocument ? "Document updated" : "Document saved",
-        description: editingDocument ? "Document updated successfully" : "New document added successfully"
-      });
       onSuccess();
     } catch (error) {
       console.error('Error saving document:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save document. Please try again.",
-        variant: "destructive"
-      });
+      alert('Failed to save document. Please try again.');
     } finally {
       setIsSubmitting(false);
-      setIsUploading(false);
     }
   };
 
@@ -210,89 +177,35 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = async (e) => {
+    input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          toast({
-            title: "File too large",
-            description: "Please select an image smaller than 5MB",
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-          toast({
-            title: "Invalid file type",
-            description: "Please select an image file",
-            variant: "destructive"
-          });
-          return;
-        }
-        
         setImageFile(file);
-        toast({
-          title: "Image selected",
-          description: `${file.name} ready to upload`
-        });
         console.log('Manual file upload successful:', file.name);
       }
     };
     input.click();
   };
 
-  const handleAddEntity = async (e: React.FormEvent) => {
+  const handleAddEntity = (e: React.FormEvent) => {
     e.preventDefault();
     if (!entityFormData.name.trim()) return;
 
-    try {
-      await SupabaseStorageService.addEntity({
-        id: `entity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        ...entityFormData
-      });
-      await loadEntities();
-      // Set the newly created entity as selected
-      setFormData({ ...formData, entityId: 'self' }); // Default to 'self' for now, as we can't get the new ID easily
-      setEntityFormData({ name: '', tag: '', icon: '👤', color: '#3B82F6' });
-      setIsAddEntityDialogOpen(false);
-      toast({
-        title: "Entity added",
-        description: "New entity created successfully"
-      });
-    } catch (error) {
-      console.error('Error adding entity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add entity. Please try again.",
-        variant: "destructive"
-      });
-    }
+    const newEntity = EntityService.addEntity(entityFormData);
+    loadEntities();
+    setFormData({ ...formData, entityId: newEntity.id });
+    setEntityFormData({ name: '', tag: '', icon: '👤', color: '#3B82F6' });
+    setIsAddEntityDialogOpen(false);
   };
 
-  const handleAddDocumentType = async (e: React.FormEvent) => {
+  const handleAddDocumentType = (e: React.FormEvent) => {
     e.preventDefault();
     if (!typeFormData.name.trim()) return;
 
-    try {
-      await SupabaseStorageService.addCustomDocumentType(typeFormData);
-      await loadCustomDocumentTypes();
-      setTypeFormData({ name: '', icon: '📄' });
-      setIsAddTypeDialogOpen(false);
-      toast({
-        title: "Document type added",
-        description: "New document type created successfully"
-      });
-    } catch (error) {
-      console.error('Error adding document type:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add document type. Please try again.",
-        variant: "destructive"
-      });
-    }
+    CustomDocumentService.addCustomDocumentType(typeFormData);
+    loadCustomDocumentTypes();
+    setTypeFormData({ name: '', icon: '📄' });
+    setIsAddTypeDialogOpen(false);
   };
 
   const formatDateForInput = (date?: Date) => {
@@ -307,23 +220,13 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       label: type.name,
       icon: type.icon
     }));
-    
-    // Combine and deduplicate options by value
-    const allOptions = [...standardOptions, ...customOptions];
-    const uniqueOptions = allOptions.filter((option, index, self) => 
-      index === self.findIndex(o => o.value === option.value)
-    );
-    
-    return uniqueOptions;
+    return [...standardOptions, ...customOptions];
   };
 
   return (
-    <div 
-      className="min-h-screen bg-primary-bg p-2 sm:p-4 pt-6 sm:pt-8"
-      style={{ paddingTop: 'max(env(safe-area-inset-top), 1.5rem)' }}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 pt-12">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 sm:mb-8">
+      <div className="flex items-center justify-between mb-8 mt-8">
         <div className="flex items-center space-x-3">
           <Button 
             variant="outline" 
@@ -334,10 +237,10 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
             <ArrowUp className="h-5 w-5 rotate-[-90deg]" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-text-primary">
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
               {editingDocument ? 'Edit Document' : 'Add Document'}
             </h1>
-            <p className="text-text-secondary">
+            <p className="text-gray-600 dark:text-gray-400">
               {editingDocument ? 'Update renewal reminder' : 'Create a new renewal reminder'}
             </p>
           </div>
@@ -345,16 +248,16 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       </div>
 
       {/* Form */}
-      <Card className="card-shadow bg-card-bg">
+      <Card className="card-shadow bg-white dark:bg-gray-800">
         <CardHeader>
-          <CardTitle className="text-text-primary">Document Information</CardTitle>
+          <CardTitle className="text-gray-800 dark:text-gray-200">Document Information</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Assign To */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="entity" className="text-text-primary">Assign To</Label>
+                <Label htmlFor="entity" className="text-gray-700 dark:text-gray-300">Assign To</Label>
                 <Dialog open={isAddEntityDialogOpen} onOpenChange={setIsAddEntityDialogOpen}>
                   <DialogTrigger asChild>
                     <Button type="button" variant="outline" size="sm" className="mobile-tap">
@@ -362,7 +265,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                       Add Entity
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-card-bg">
+                  <DialogContent className="bg-white dark:bg-gray-800">
                     <DialogHeader>
                       <DialogTitle>Add New Entity</DialogTitle>
                     </DialogHeader>
@@ -436,10 +339,10 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 value={formData.entityId} 
                 onValueChange={(value) => setFormData({ ...formData, entityId: value })}
               >
-                <SelectTrigger className="mobile-tap">
+                <SelectTrigger className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
                   <SelectValue placeholder="Select entity" />
                 </SelectTrigger>
-                <SelectContent className="bg-card-bg z-50">
+                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
                   {entities.map((entity) => (
                     <SelectItem key={entity.id} value={entity.id}>
                       <div className="flex items-center space-x-2">
@@ -450,7 +353,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                           {entity.icon}
                         </div>
                         <span>{entity.name}</span>
-                        {entity.tag && <span className="text-xs text-text-secondary">({entity.tag})</span>}
+                        {entity.tag && <span className="text-xs text-gray-500">({entity.tag})</span>}
                       </div>
                     </SelectItem>
                   ))}
@@ -460,7 +363,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Document Name */}
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-text-primary">Document Name</Label>
+              <Label htmlFor="name" className="text-gray-700 dark:text-gray-300">Document Name</Label>
               <Input
                 id="name"
                 type="text"
@@ -468,14 +371,14 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="mobile-tap"
+                className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
               />
             </div>
 
             {/* Document Type */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="type" className="text-text-primary">Document Type</Label>
+                <Label htmlFor="type" className="text-gray-700 dark:text-gray-300">Document Type</Label>
                 <Dialog open={isAddTypeDialogOpen} onOpenChange={setIsAddTypeDialogOpen}>
                   <DialogTrigger asChild>
                     <Button type="button" variant="outline" size="sm" className="mobile-tap">
@@ -483,7 +386,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                       Add Type
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-card-bg">
+                  <DialogContent className="bg-white dark:bg-gray-800">
                     <DialogHeader>
                       <DialogTitle>Add Custom Document Type</DialogTitle>
                     </DialogHeader>
@@ -530,10 +433,10 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 value={formData.type} 
                 onValueChange={(value: DocumentType) => setFormData({ ...formData, type: value })}
               >
-                <SelectTrigger className="mobile-tap">
+                <SelectTrigger className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
                   <SelectValue placeholder="Select document type" />
                 </SelectTrigger>
-                <SelectContent className="bg-card-bg z-50">
+                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
                   {getAllDocumentOptions().map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center space-x-2">
@@ -548,7 +451,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Expiry Date */}
             <div className="space-y-2">
-              <Label htmlFor="expiryDate" className="text-text-primary">Expiry Date</Label>
+              <Label htmlFor="expiryDate" className="text-gray-700 dark:text-gray-300">Expiry Date</Label>
               <Input
                 id="expiryDate"
                 type="date"
@@ -558,21 +461,21 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                   setFormData({ ...formData, expiryDate: date });
                 }}
                 required
-                className="mobile-tap"
+                className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
               />
             </div>
 
             {/* Reminder Timeframe */}
             <div className="space-y-2">
-              <Label htmlFor="reminder" className="text-text-primary">Reminder Timeframe</Label>
+              <Label htmlFor="reminder" className="text-gray-700 dark:text-gray-300">Reminder Timeframe</Label>
               <Select 
                 value={formData.reminderPeriod} 
                 onValueChange={(value: ReminderPeriod) => setFormData({ ...formData, reminderPeriod: value })}
               >
-                <SelectTrigger className="mobile-tap">
+                <SelectTrigger className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-card-bg z-50">
+                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
                   {reminderOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
@@ -584,20 +487,20 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Notes (Optional) */}
             <div className="space-y-2">
-              <Label htmlFor="notes" className="text-text-primary">Notes (Optional)</Label>
+              <Label htmlFor="notes" className="text-gray-700 dark:text-gray-300">Notes (Optional)</Label>
               <Textarea
                 id="notes"
                 placeholder="Additional notes about this document..."
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="mobile-tap"
+                className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
               />
             </div>
 
             {/* Document Image */}
             <div className="space-y-2">
-              <Label className="text-text-primary">Document Image</Label>
+              <Label className="text-gray-700 dark:text-gray-300">Document Image</Label>
               <Button
                 type="button"
                 variant="outline"
@@ -608,7 +511,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 Browse Files
               </Button>
               {imageFile && (
-                <div className="text-sm text-text-secondary mt-2">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Selected: {imageFile.name}
                 </div>
               )}
@@ -618,9 +521,9 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
             <Button 
               type="submit" 
               className="w-full mobile-tap bg-primary hover:bg-primary/90"
-              disabled={isSubmitting || isUploading}
+              disabled={isSubmitting}
             >
-              {isUploading ? 'Uploading Image...' : isSubmitting ? 'Saving...' : editingDocument ? 'Update Document' : 'Save Document'}
+              {isSubmitting ? 'Saving...' : editingDocument ? 'Update Document' : 'Save Document'}
             </Button>
           </form>
         </CardContent>
