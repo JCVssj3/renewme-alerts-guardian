@@ -5,8 +5,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowUp, Plus, User, FileText } from 'lucide-react';
+import { ArrowUp, Plus, User, FileText, Trash2 } from 'lucide-react';
 import { Document, DocumentType, ReminderPeriod, Entity, CustomDocumentType } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
 import { EntityService } from '@/services/entityService';
@@ -51,6 +61,11 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     name: '',
     icon: '📄'
   });
+
+  // Delete Dialog State
+  const [isDeleteEntityDialogOpen, setIsDeleteEntityDialogOpen] = useState(false);
+  const [isDeleteTypeDialogOpen, setIsDeleteTypeDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{id: string, name: string} | null>(null);
 
   const reminderOptions = [
     { value: '1_week', label: '1 Week Before' },
@@ -208,6 +223,50 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
     setIsAddTypeDialogOpen(false);
   };
 
+  const handleDeleteEntity = (entityId: string) => {
+    if (entityId === 'self') {
+      alert("Cannot delete the default 'Self' entity.");
+      return;
+    }
+    const entity = entities.find(e => e.id === entityId);
+    if (entity) {
+      setItemToDelete({ id: entity.id, name: entity.name });
+      setIsDeleteEntityDialogOpen(true);
+    }
+  };
+
+  const handleDeleteDocumentType = (typeId: string) => {
+    const type = customDocumentTypes.find(t => t.id === typeId);
+    if (type) {
+      setItemToDelete({ id: type.id, name: type.name });
+      setIsDeleteTypeDialogOpen(true);
+    }
+  };
+
+  const confirmDeleteEntity = () => {
+    if (itemToDelete) {
+      EntityService.deleteEntity(itemToDelete.id);
+      loadEntities();
+      if (formData.entityId === itemToDelete.id) {
+        setFormData({ ...formData, entityId: 'self' });
+      }
+      setIsDeleteEntityDialogOpen(false);
+      setItemToDelete(null);
+    }
+  };
+
+  const confirmDeleteDocumentType = () => {
+    if (itemToDelete) {
+      CustomDocumentService.deleteCustomDocumentType(itemToDelete.id);
+      loadCustomDocumentTypes();
+      if (formData.type === itemToDelete.id) {
+        setFormData({ ...formData, type: '' as DocumentType });
+      }
+      setIsDeleteTypeDialogOpen(false);
+      setItemToDelete(null);
+    }
+  };
+
   const formatDateForInput = (date?: Date) => {
     if (!date) return '';
     return date.toISOString().split('T')[0];
@@ -224,7 +283,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 pt-12">
+    <div className="min-h-screen bg-primary-bg p-4 pt-12">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 mt-8">
         <div className="flex items-center space-x-3">
@@ -237,10 +296,10 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
             <ArrowUp className="h-5 w-5 rotate-[-90deg]" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+            <h1 className="text-2xl font-bold text-text-primary">
               {editingDocument ? 'Edit Document' : 'Add Document'}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-text-secondary">
               {editingDocument ? 'Update renewal reminder' : 'Create a new renewal reminder'}
             </p>
           </div>
@@ -248,16 +307,16 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
       </div>
 
       {/* Form */}
-      <Card className="card-shadow bg-white dark:bg-gray-800">
+      <Card className="card-shadow bg-card-bg">
         <CardHeader>
-          <CardTitle className="text-gray-800 dark:text-gray-200">Document Information</CardTitle>
+          <CardTitle className="text-text-primary">Document Information</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Assign To */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="entity" className="text-gray-700 dark:text-gray-300">Assign To</Label>
+                <Label htmlFor="entity" className="text-text-primary">Assign To</Label>
                 <Dialog open={isAddEntityDialogOpen} onOpenChange={setIsAddEntityDialogOpen}>
                   <DialogTrigger asChild>
                     <Button type="button" variant="outline" size="sm" className="mobile-tap">
@@ -265,7 +324,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                       Add Entity
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-white dark:bg-gray-800">
+                  <DialogContent className="bg-card-bg">
                     <DialogHeader>
                       <DialogTitle>Add New Entity</DialogTitle>
                     </DialogHeader>
@@ -339,21 +398,36 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 value={formData.entityId} 
                 onValueChange={(value) => setFormData({ ...formData, entityId: value })}
               >
-                <SelectTrigger className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                <SelectTrigger className="mobile-tap bg-card-bg border-gray-300">
                   <SelectValue placeholder="Select entity" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
+                <SelectContent className="bg-card-bg border-gray-300 z-50">
                   {entities.map((entity) => (
                     <SelectItem key={entity.id} value={entity.id}>
-                      <div className="flex items-center space-x-2">
-                        <div 
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs"
-                          style={{ backgroundColor: entity.color }}
-                        >
-                          {entity.icon}
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs"
+                            style={{ backgroundColor: entity.color }}
+                          >
+                            {entity.icon}
+                          </div>
+                          <span>{entity.name}</span>
+                          {entity.tag && <span className="text-xs text-gray-500">({entity.tag})</span>}
                         </div>
-                        <span>{entity.name}</span>
-                        {entity.tag && <span className="text-xs text-gray-500">({entity.tag})</span>}
+                        {entity.id !== 'self' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteEntity(entity.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3 text-red-500" />
+                          </Button>
+                        )}
                       </div>
                     </SelectItem>
                   ))}
@@ -363,7 +437,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Document Name */}
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-gray-700 dark:text-gray-300">Document Name</Label>
+              <Label htmlFor="name" className="text-text-primary">Document Name</Label>
               <Input
                 id="name"
                 type="text"
@@ -371,14 +445,14 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                className="mobile-tap bg-card-bg border-gray-300"
               />
             </div>
 
             {/* Document Type */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="type" className="text-gray-700 dark:text-gray-300">Document Type</Label>
+                <Label htmlFor="type" className="text-text-primary">Document Type</Label>
                 <Dialog open={isAddTypeDialogOpen} onOpenChange={setIsAddTypeDialogOpen}>
                   <DialogTrigger asChild>
                     <Button type="button" variant="outline" size="sm" className="mobile-tap">
@@ -386,7 +460,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                       Add Type
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-white dark:bg-gray-800">
+                  <DialogContent className="bg-card-bg">
                     <DialogHeader>
                       <DialogTitle>Add Custom Document Type</DialogTitle>
                     </DialogHeader>
@@ -433,15 +507,30 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 value={formData.type} 
                 onValueChange={(value: DocumentType) => setFormData({ ...formData, type: value })}
               >
-                <SelectTrigger className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                <SelectTrigger className="mobile-tap bg-card-bg border-gray-300">
                   <SelectValue placeholder="Select document type" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
+                <SelectContent className="bg-card-bg border-gray-300 z-50">
                   {getAllDocumentOptions().map((option) => (
                     <SelectItem key={option.value} value={option.value}>
-                      <div className="flex items-center space-x-2">
-                        <span>{option.icon}</span>
-                        <span>{option.label}</span>
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center space-x-2">
+                          <span>{option.icon}</span>
+                          <span>{option.label}</span>
+                        </div>
+                        {customDocumentTypes.some(t => t.id === option.value) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDocumentType(option.value);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3 text-red-500" />
+                          </Button>
+                        )}
                       </div>
                     </SelectItem>
                   ))}
@@ -451,7 +540,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Expiry Date */}
             <div className="space-y-2">
-              <Label htmlFor="expiryDate" className="text-gray-700 dark:text-gray-300">Expiry Date</Label>
+              <Label htmlFor="expiryDate" className="text-text-primary">Expiry Date</Label>
               <Input
                 id="expiryDate"
                 type="date"
@@ -461,21 +550,21 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                   setFormData({ ...formData, expiryDate: date });
                 }}
                 required
-                className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                className="mobile-tap bg-card-bg border-gray-300"
               />
             </div>
 
             {/* Reminder Timeframe */}
             <div className="space-y-2">
-              <Label htmlFor="reminder" className="text-gray-700 dark:text-gray-300">Reminder Timeframe</Label>
+              <Label htmlFor="reminder" className="text-text-primary">Reminder Timeframe</Label>
               <Select 
                 value={formData.reminderPeriod} 
                 onValueChange={(value: ReminderPeriod) => setFormData({ ...formData, reminderPeriod: value })}
               >
-                <SelectTrigger className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                <SelectTrigger className="mobile-tap bg-card-bg border-gray-300">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 z-50">
+                <SelectContent className="bg-card-bg border-gray-300 z-50">
                   {reminderOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
@@ -487,20 +576,20 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
 
             {/* Notes (Optional) */}
             <div className="space-y-2">
-              <Label htmlFor="notes" className="text-gray-700 dark:text-gray-300">Notes (Optional)</Label>
+              <Label htmlFor="notes" className="text-text-primary">Notes (Optional)</Label>
               <Textarea
                 id="notes"
                 placeholder="Additional notes about this document..."
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="mobile-tap bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                className="mobile-tap bg-card-bg border-gray-300"
               />
             </div>
 
             {/* Document Image */}
             <div className="space-y-2">
-              <Label className="text-gray-700 dark:text-gray-300">Document Image</Label>
+              <Label className="text-text-primary">Document Image</Label>
               <Button
                 type="button"
                 variant="outline"
@@ -511,7 +600,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
                 Browse Files
               </Button>
               {imageFile && (
-                <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <div className="text-sm text-text-secondary mt-2">
                   Selected: {imageFile.name}
                 </div>
               )}
@@ -528,6 +617,38 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({ onBack, onSuccess, ed
           </form>
         </CardContent>
       </Card>
+
+      {/* Delete Entity Dialog */}
+      <AlertDialog open={isDeleteEntityDialogOpen} onOpenChange={setIsDeleteEntityDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the entity "{itemToDelete?.name}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteEntity}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Document Type Dialog */}
+      <AlertDialog open={isDeleteTypeDialogOpen} onOpenChange={setIsDeleteTypeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the document type "{itemToDelete?.name}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteDocumentType}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
