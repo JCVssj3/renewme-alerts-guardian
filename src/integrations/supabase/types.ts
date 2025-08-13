@@ -143,6 +143,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_settings: {
+        Row: {
+          created_at: string
+          default_reminder_period: string
+          id: string
+          notifications_enabled: boolean
+          notifications_sound: boolean
+          notifications_vibration: boolean
+          theme: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          default_reminder_period?: string
+          id?: string
+          notifications_enabled?: boolean
+          notifications_sound?: boolean
+          notifications_vibration?: boolean
+          theme?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          default_reminder_period?: string
+          id?: string
+          notifications_enabled?: boolean
+          notifications_sound?: boolean
+          notifications_vibration?: boolean
+          theme?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       documents_needing_reminders: {
