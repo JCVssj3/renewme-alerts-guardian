@@ -14,20 +14,28 @@ export class NotificationService {
       const reminderDate = getReminderDate(document.expiryDate, document.reminderPeriod);
       const daysLeft = calculateDaysUntilExpiry(document.expiryDate);
       
+      // Set the specific time for the reminder
+      const [hours, minutes] = (document.reminderTime || '09:00').split(':');
+      reminderDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
       // Don't schedule if the reminder date has already passed
       if (reminderDate < new Date()) {
         console.log('Reminder date has passed for document:', document.name);
         return;
       }
 
-      // Schedule the main reminder notification
+      // Schedule the main reminder notification using AlarmManager equivalent
       await LocalNotifications.schedule({
         notifications: [
           {
             title: '🚨 Document Expiring Soon!',
             body: `Your ${document.name} expires in ${daysLeft} days. Don't forget to renew it!`,
             id: parseInt(document.id.replace(/\D/g, '').slice(0, 8) || '1'),
-            schedule: { at: reminderDate },
+            schedule: { 
+              at: reminderDate,
+              allowWhileIdle: true, // Ensures notification works when device is idle
+              repeats: false 
+            },
             sound: 'beep.wav',
             attachments: undefined,
             actionTypeId: '',
@@ -35,13 +43,14 @@ export class NotificationService {
               documentId: document.id,
               documentName: document.name,
               expiryDate: document.expiryDate.toISOString(),
+              reminderTime: document.reminderTime,
               type: 'reminder'
             }
           }
         ]
       });
 
-      // Schedule follow-up notification 1 day after reminder
+      // Schedule follow-up notification 1 day after reminder at the same time
       const followUpDate = new Date(reminderDate.getTime() + 24 * 60 * 60 * 1000);
       await LocalNotifications.schedule({
         notifications: [
@@ -49,35 +58,47 @@ export class NotificationService {
             title: '📋 Document Status Check',
             body: `Have you handled the renewal for ${document.name}? Tap to mark as handled.`,
             id: parseInt(document.id.replace(/\D/g, '').slice(0, 8) || '1') + 10000,
-            schedule: { at: followUpDate },
+            schedule: { 
+              at: followUpDate,
+              allowWhileIdle: true, // Ensures notification works when device is idle
+              repeats: false 
+            },
             sound: 'beep.wav',
             attachments: undefined,
             actionTypeId: '',
             extra: {
               documentId: document.id,
               documentName: document.name,
+              reminderTime: document.reminderTime,
               type: 'followup'
             }
           }
         ]
       });
 
-      // Schedule final warning if expiry is close
+      // Schedule final warning if expiry is close at user's preferred time
       if (daysLeft <= 7 && daysLeft > 0) {
         const finalWarningDate = new Date(document.expiryDate.getTime() - 24 * 60 * 60 * 1000); // 1 day before expiry
+        finalWarningDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        
         await LocalNotifications.schedule({
           notifications: [
             {
               title: '🔴 FINAL WARNING!',
               body: `${document.name} expires tomorrow! Take action now!`,
               id: parseInt(document.id.replace(/\D/g, '').slice(0, 8) || '1') + 20000,
-              schedule: { at: finalWarningDate },
+              schedule: { 
+                at: finalWarningDate,
+                allowWhileIdle: true, // Ensures notification works when device is idle
+                repeats: false 
+              },
               sound: 'beep.wav',
               attachments: undefined,
               actionTypeId: '',
               extra: {
                 documentId: document.id,
                 documentName: document.name,
+                reminderTime: document.reminderTime,
                 type: 'final_warning'
               }
             }
@@ -86,8 +107,9 @@ export class NotificationService {
       }
       
       console.log(`Notifications scheduled for ${document.name}:`);
-      console.log(`- Reminder: ${reminderDate}`);
+      console.log(`- Reminder: ${reminderDate} at ${document.reminderTime || '09:00'}`);
       console.log(`- Follow-up: ${followUpDate}`);
+      console.log('- AlarmManager will ensure notifications work even when app is closed');
     } catch (error) {
       console.error('Error scheduling notification:', error);
     }

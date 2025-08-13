@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { TimePicker } from '@/components/ui/time-picker';
 import { ArrowUp, Plus, User, FileText } from 'lucide-react';
 import { Document, DocumentType, ReminderPeriod, Entity, CustomDocumentType } from '@/types';
 import { SupabaseStorageService } from '@/services/supabaseStorageService';
@@ -30,6 +31,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({
     type: '' as DocumentType,
     expiryDate: undefined as Date | undefined,
     reminderPeriod: '2_weeks' as ReminderPeriod,
+    reminderTime: '09:00' as string,
     notes: '',
     imageUrl: '',
     entityId: 'self'
@@ -89,6 +91,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({
         type: editingDocument.type,
         expiryDate: editingDocument.expiryDate,
         reminderPeriod: editingDocument.reminderPeriod,
+        reminderTime: editingDocument.reminderTime || '09:00',
         notes: editingDocument.notes || '',
         imageUrl: editingDocument.imageUrl || '',
         entityId: editingDocument.entityId || 'self'
@@ -130,6 +133,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({
           type: formData.type,
           expiryDate: formData.expiryDate,
           reminderPeriod: formData.reminderPeriod,
+          reminderTime: formData.reminderTime,
           notes: formData.notes.trim(),
           imageUrl: imageUrl,
           entityId: formData.entityId
@@ -140,6 +144,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({
           type: formData.type,
           expiryDate: formData.expiryDate,
           reminderPeriod: formData.reminderPeriod,
+          reminderTime: formData.reminderTime,
           notes: formData.notes.trim(),
           imageUrl: imageUrl,
           entityId: formData.entityId
@@ -150,6 +155,7 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({
           type: formData.type,
           expiryDate: formData.expiryDate,
           reminderPeriod: formData.reminderPeriod,
+          reminderTime: formData.reminderTime,
           notes: formData.notes.trim(),
           imageUrl: imageUrl,
           entityId: formData.entityId,
@@ -442,6 +448,20 @@ const AddDocumentForm: React.FC<AddDocumentFormProps> = ({
                     </SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Reminder Time */}
+            <div className="space-y-2">
+              <Label className="text-gray-700 dark:text-gray-300">Reminder Time</Label>
+              <TimePicker
+                value={formData.reminderTime}
+                onChange={(time) => setFormData({ ...formData, reminderTime: time })}
+                placeholder="Select reminder time"
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+              />
+              <p className="text-sm text-muted-foreground">
+                You'll be notified at this time on your reminder day, even if the app is closed.
+              </p>
             </div>
 
             {/* Notes (Optional) */}

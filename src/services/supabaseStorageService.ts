@@ -21,6 +21,7 @@ export class SupabaseStorageService {
         ...doc,
         expiryDate: new Date(doc.expiry_date),
         reminderPeriod: doc.reminder_period as ReminderPeriod,
+        reminderTime: doc.reminder_time || '09:00',
         imageUrl: doc.image_url,
         entityId: doc.entity_id,
         isHandled: doc.is_handled,
@@ -43,6 +44,7 @@ export class SupabaseStorageService {
           type: document.type,
           expiry_date: document.expiryDate.toISOString(),
           reminder_period: document.reminderPeriod,
+          reminder_time: document.reminderTime || '09:00',
           notes: document.notes,
           image_url: document.imageUrl,
           entity_id: document.entityId,
@@ -64,6 +66,7 @@ export class SupabaseStorageService {
       if (updates.type) updateData.type = updates.type;
       if (updates.expiryDate) updateData.expiry_date = updates.expiryDate.toISOString();
       if (updates.reminderPeriod) updateData.reminder_period = updates.reminderPeriod;
+      if (updates.reminderTime) updateData.reminder_time = updates.reminderTime;
       if (updates.notes !== undefined) updateData.notes = updates.notes;
       if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl;
       if (updates.entityId) updateData.entity_id = updates.entityId;

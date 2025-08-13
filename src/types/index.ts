@@ -5,6 +5,7 @@ export interface Document {
   type: DocumentType;
   expiryDate: Date;
   reminderPeriod: ReminderPeriod;
+  reminderTime?: string; // Time in HH:MM format (24-hour)
   notes?: string;
   imageUrl?: string;
   isHandled: boolean;
