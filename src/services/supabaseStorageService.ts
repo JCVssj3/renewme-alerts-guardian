@@ -49,7 +49,7 @@ export class SupabaseStorageService {
           image_url: document.imageUrl,
           entity_id: document.entityId,
           is_handled: document.isHandled
-        });
+        } as any);
 
       if (error) throw error;
     } catch (error) {
